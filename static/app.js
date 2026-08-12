@@ -13,6 +13,13 @@ function initApp() {
     initArcCanvas();
     fetchTelemetry();
     setInterval(fetchTelemetry, 10000);
+
+    // Auto-activate voice mode by default
+    setTimeout(() => {
+        if (recognition && !isVoiceActive) {
+            toggleVoiceMode();
+        }
+    }, 500);
 }
 
 function setupEventListeners() {
@@ -167,8 +174,8 @@ async function handleCommandSubmit(e) {
     if (!query) return;
 
     input.value = "";
-    updateReactorState("THINKING", `Executing: "${query}"`);
-    await executeQuery(query);
+    updateReactorState("THINKING", `Processing: "${query}"`);
+    await handleVoiceIntent(query);
 }
 
 async function executeQuery(query) {

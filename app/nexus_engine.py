@@ -53,6 +53,236 @@ def get_system_telemetry() -> Dict[str, Any]:
         "boot_time": boot_time
     }
 
+async def execute_git_command(git_cmd: str, extra_args: str = "") -> Dict[str, Any]:
+    """Executes safe git commands (status, log, diff, branch, add, commit, push)."""
+    import subprocess
+    allowed_cmds = {
+        "status": ["git", "status"],
+        "log": ["git", "log", "-n", "5", "--oneline"],
+        "branch": ["git", "branch"],
+        "diff": ["git", "diff"],
+        "add": ["git", "add", "."],
+        "commit": ["git", "commit", "-m", extra_args if extra_args else "Auto commit by NEXUS Assistant"],
+        "push": ["git", "push"]
+    }
+    
+    cmd_key = git_cmd.lower().strip()
+    if cmd_key not in allowed_cmds:
+        return {"status": "error", "output": f"Git action '{git_cmd}' not recognized."}
+        
+    try:
+        proc = subprocess.run(
+            allowed_cmds[cmd_key],
+            capture_output=True,
+            text=True,
+            cwd=os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+        )
+        return {
+            "status": "success" if proc.returncode == 0 else "error",
+            "command": " ".join(allowed_cmds[cmd_key]),
+            "output": proc.stdout if proc.stdout else proc.stderr,
+            "returncode": proc.returncode
+        }
+    except Exception as e:
+        return {"status": "error", "output": str(e)}
+
+async def parse_and_execute_voice_intent(command_raw: str) -> Dict[str, Any]:
+    r"""Intelligent NLP & Multi-step Task Engine for NEXUS.
+    Handles:
+    - Launching any app
+    - Opening project folders (e.g. d:\Projects\Ace)
+    - Multi-step commands (e.g. open Ace and execute ace ship)
+    - Git & GitHub commands
+    - Web search
+    """
+    import subprocess
+    import re
+
+    clean_cmd = command_raw.lower().strip()
+    
+    # Strip filler prefixes
+    for prefix in ["please ", "can you ", "could you ", "nexus ", "hey nexus ", "kindly ", "i want to ", "i need to "]:
+        if clean_cmd.startswith(prefix):
+            clean_cmd = clean_cmd[len(prefix):].strip()
+
+    projects_dir = r"d:\Projects"
+
+    # 1. Multi-step Project & Command Execution
+    if "open" in clean_cmd or "execute" in clean_cmd or "run" in clean_cmd or "ship" in clean_cmd:
+        matched_proj_path = None
+        matched_proj_name = None
+        
+        if os.path.exists(projects_dir):
+            for proj_folder in os.listdir(projects_dir):
+                full_p = os.path.join(projects_dir, proj_folder)
+                if os.path.isdir(full_p):
+                    if proj_folder.lower() in clean_cmd or proj_folder.lower().replace("-", "") in clean_cmd.replace("-", ""):
+                        matched_proj_path = full_p
+                        matched_proj_name = proj_folder
+                        break
+
+        if "projects folder" in clean_cmd or "projects directory" in clean_cmd or "my projects" in clean_cmd:
+            if not matched_proj_path:
+                try:
+                    subprocess.Popen(f'explorer "{projects_dir}"', shell=True)
+                    return {
+                        "status": "action_executed",
+                        "intent": "open_projects_folder",
+                        "message": f"NEXUS opened Projects directory ({projects_dir}).",
+                        "data": {"path": projects_dir}
+                    }
+                except Exception as e:
+                    return {"status": "error", "message": f"Failed to open Projects directory: {str(e)}"}
+
+        if matched_proj_path:
+            exec_match = re.search(r'(execute|run|ship)\s+(.+)', clean_cmd)
+            if exec_match or "ace ship" in clean_cmd or "ship" in clean_cmd:
+                sub_cmd = "ace ship" if "ace ship" in clean_cmd or "ship" in clean_cmd else exec_match.group(2).strip()
+                
+                if "open" in clean_cmd:
+                    try:
+                        if "code" in clean_cmd or "vscode" in clean_cmd:
+                            subprocess.Popen(f'code "{matched_proj_path}"', shell=True)
+                        else:
+                            subprocess.Popen(f'explorer "{matched_proj_path}"', shell=True)
+                    except Exception:
+                        pass
+                
+                try:
+                    proc = subprocess.run(
+                        sub_cmd,
+                        shell=True,
+                        capture_output=True,
+                        text=True,
+                        cwd=matched_proj_path,
+                        timeout=30.0
+                    )
+                    out_text = proc.stdout if proc.stdout else proc.stderr
+                    if not out_text:
+                        out_text = f"Command '{sub_cmd}' completed cleanly in {matched_proj_name}."
+                    
+                    return {
+                        "status": "action_executed",
+                        "intent": "execute_project_command",
+                        "message": f"NEXUS executed '{sub_cmd}' in {matched_proj_name}:\n{out_text[:400]}",
+                        "data": {"project": matched_proj_name, "command": sub_cmd, "output": out_text}
+                    }
+                except Exception as e:
+                    return {
+                        "status": "action_executed",
+                        "intent": "execute_project_command",
+                        "message": f"NEXUS opened project '{matched_proj_name}' and initiated execution of '{sub_cmd}'.",
+                        "data": {"project": matched_proj_name, "command": sub_cmd, "error": str(e)}
+                    }
+            else:
+                try:
+                    if "code" in clean_cmd or "vscode" in clean_cmd:
+                        subprocess.Popen(f'code "{matched_proj_path}"', shell=True)
+                        action_msg = f"opened {matched_proj_name} in VS Code"
+                    else:
+                        subprocess.Popen(f'explorer "{matched_proj_path}"', shell=True)
+                        action_msg = f"opened {matched_proj_name} in File Explorer"
+                    
+                    return {
+                        "status": "action_executed",
+                        "intent": "open_project",
+                        "message": f"NEXUS {action_msg}.",
+                        "data": {"path": matched_proj_path}
+                    }
+                except Exception as e:
+                    return {"status": "error", "message": f"Failed to open project {matched_proj_name}: {str(e)}"}
+
+    # 2. Hardware Stats
+    if "stats" in clean_cmd or "system" in clean_cmd or "cpu" in clean_cmd or "memory" in clean_cmd or "ram" in clean_cmd:
+        stats = get_system_telemetry()
+        return {
+            "status": "action_executed",
+            "intent": "system_stats",
+            "message": f"System Telemetry: CPU {stats['cpu_percent']}%, RAM {stats['ram_percent']}% used ({stats['ram_used_gb']}/{stats['ram_total_gb']} GB). OS: {stats['os']}.",
+            "data": stats
+        }
+
+    # 3. Git & GitHub Commands
+    if "git" in clean_cmd or "repository" in clean_cmd or "commit" in clean_cmd or "push" in clean_cmd:
+        git_action = "status"
+        if "log" in clean_cmd: git_action = "log"
+        elif "branch" in clean_cmd: git_action = "branch"
+        elif "diff" in clean_cmd: git_action = "diff"
+        elif "commit" in clean_cmd: git_action = "commit"
+        elif "push" in clean_cmd: git_action = "push"
+        elif "add" in clean_cmd: git_action = "add"
+        
+        res = await execute_git_command(git_action)
+        return {
+            "status": "action_executed",
+            "intent": "git_action",
+            "message": f"NEXUS Git Action '{git_action.upper()}':\n{res.get('output', 'Success')}",
+            "data": res
+        }
+
+    # 4. Universal App Launching
+    if clean_cmd.startswith("open ") or clean_cmd.startswith("launch ") or clean_cmd.startswith("start ") or clean_cmd.startswith("run "):
+        app_target = re.sub(r'^(open|launch|start|run)\s+(app|application|program)?\s*', '', clean_cmd).strip()
+        
+        if app_target:
+            app_map = {
+                "vscode": "code",
+                "vs code": "code",
+                "code": "code",
+                "visual studio code": "code",
+                "chrome": "chrome",
+                "google chrome": "chrome",
+                "browser": "chrome",
+                "notepad": "notepad",
+                "calculator": "calc",
+                "calc": "calc",
+                "terminal": "start cmd",
+                "cmd": "start cmd",
+                "command prompt": "start cmd",
+                "powershell": "start powershell",
+                "explorer": "explorer",
+                "file explorer": "explorer",
+                "my computer": "explorer",
+                "spotify": "spotify",
+                "discord": "discord",
+                "paint": "mspaint",
+                "mspaint": "mspaint",
+                "taskmgr": "taskmgr",
+                "task manager": "taskmgr"
+            }
+            
+            launch_cmd = app_map.get(app_target, f"start {app_target}")
+            try:
+                subprocess.Popen(launch_cmd, shell=True)
+                return {
+                    "status": "action_executed",
+                    "intent": "launch_app",
+                    "message": f"NEXUS launching {app_target.upper()}...",
+                    "data": {"app": app_target}
+                }
+            except Exception as e:
+                return {"status": "error", "message": f"Failed to launch {app_target}: {str(e)}"}
+
+    # 5. Explicit Web Search ONLY
+    if clean_cmd.startswith("search web for") or clean_cmd.startswith("google ") or clean_cmd.startswith("web search ") or clean_cmd.startswith("search internet for"):
+        q = re.sub(r'^(search web for|google|web search|search internet for)\s*', '', clean_cmd).strip()
+        if not q: q = "latest tech news"
+        results = await search_ddg(q)
+        snippets = "\n".join([f"• {r['title']}: {r['snippet']}" for r in results[:3]]) if results else "No web results found."
+        return {
+            "status": "action_executed",
+            "intent": "web_search",
+            "message": f"Web search results for '{q}':\n{snippets}",
+            "data": results
+        }
+
+    # 6. Default: General LLM Query
+    return {
+        "status": "query",
+        "intent": "chat_query",
+        "command": command_raw
+    }
+
 async def execute_python_code(code_str: str) -> Dict[str, Any]:
     """Executes python code string safely in a sub-process and returns output/errors."""
     try:

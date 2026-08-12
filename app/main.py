@@ -24,12 +24,14 @@ from app.nexus_engine import (
     search_ddg,
     get_system_telemetry,
     execute_python_code,
+    execute_git_command,
+    parse_and_execute_voice_intent,
     generate_llm_response,
     NEXUS_SYSTEM_PROMPT
 )
 
 db = Database("nexus.db")
-app = FastAPI(title="NEXUS Autonomous AI Assistant", version="2.5.0")
+app = FastAPI(title="NEXUS Autonomous AI Assistant", version="3.0.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -58,6 +60,13 @@ class VoiceIntentRequest(BaseModel):
 class CodeRunRequest(BaseModel):
     code: str
 
+class GitActionRequest(BaseModel):
+    action: str
+    extraArgs: Optional[str] = ""
+
+class WebSearchRequest(BaseModel):
+    query: str
+
 class SecurityAuditRequest(BaseModel):
     scanWorkspace: bool = True
 
@@ -67,7 +76,7 @@ class ChatRequest(BaseModel):
     provider: str = "ollama"
     apiKey: Optional[str] = None
     ollamaUrl: Optional[str] = "http://localhost:11434"
-    chatModel: str = "llama3"
+    chatModel: str = "qwen2.5-coder:3b"
 
 # API Routes
 @app.get("/api/conversations")
@@ -106,14 +115,39 @@ async def list_skills():
 async def get_system_stats():
     return get_system_telemetry()
 
+# Workspace File Operations Endpoints
+@app.get("/api/files/list")
+async def list_workspace_files():
+    return workspace_manager.list_files()
+
+@app.get("/api/files/read")
+async def read_workspace_file(path: str):
+    content = workspace_manager.read_file(path)
+    if not content and not os.path.exists(path):
+        raise HTTPException(status_code=404, detail="File not found")
+    return {"path": path, "content": content}
+
+# Git & GitHub Actions Endpoint
+@app.post("/api/git/action")
+async def run_git_action(req: GitActionRequest):
+    return await execute_git_command(req.action, req.extraArgs)
+
+# Web Search & Browsing Endpoint
+@app.post("/api/web/search")
+async def web_search_endpoint(req: WebSearchRequest):
+    results = await search_ddg(req.query)
+    return {"query": req.query, "results": results}
+
 # Safe Python Code Runner Endpoint
 @app.post("/api/code/run")
 async def run_code(req: CodeRunRequest):
     return await execute_python_code(req.code)
 
-# Desktop App Launcher Endpoint
+# Universal App Launcher Endpoint
 @app.post("/api/system/launch")
 async def launch_system_app(req: AppLaunchRequest):
+    raw_name = req.appName.lower().strip()
+    
     app_map = {
         "vscode": ["code"],
         "code": ["code"],
@@ -123,22 +157,33 @@ async def launch_system_app(req: AppLaunchRequest):
         "calculator": ["calc"] if platform.system() == "Windows" else ["gnome-calculator"],
         "calc": ["calc"] if platform.system() == "Windows" else ["gnome-calculator"],
         "terminal": ["cmd", "/c", "start", "cmd"] if platform.system() == "Windows" else ["x-terminal-emulator"],
-        "cmd": ["cmd", "/c", "start", "cmd"] if platform.system() == "Windows" else ["x-terminal-emulator"]
+        "cmd": ["cmd", "/c", "start", "cmd"] if platform.system() == "Windows" else ["x-terminal-emulator"],
+        "powershell": ["powershell"] if platform.system() == "Windows" else ["bash"],
+        "explorer": ["explorer"] if platform.system() == "Windows" else ["open", "."],
+        "paint": ["mspaint"] if platform.system() == "Windows" else ["gimp"],
+        "mspaint": ["mspaint"] if platform.system() == "Windows" else ["gimp"],
+        "taskmgr": ["taskmgr"] if platform.system() == "Windows" else ["htop"],
+        "spotify": ["spotify"] if platform.system() == "Windows" else ["spotify"],
+        "discord": ["discord"] if platform.system() == "Windows" else ["discord"]
     }
 
-    key = req.appName.lower().strip()
-    if key not in app_map:
-        raise HTTPException(status_code=400, detail=f"App '{req.appName}' not supported.")
-
     try:
-        subprocess.Popen(app_map[key], shell=True if platform.system() == "Windows" else False)
+        if raw_name in app_map:
+            subprocess.Popen(app_map[raw_name], shell=True if platform.system() == "Windows" else False)
+        else:
+            # Universal Windows launch fallback for any installed application executable
+            if platform.system() == "Windows":
+                subprocess.Popen(f"start {raw_name}", shell=True)
+            else:
+                subprocess.Popen([raw_name])
+                
         return {
             "status": "success",
-            "message": f"NEXUS launched application: {key.upper()}",
-            "app": key
+            "message": f"NEXUS launched application: {raw_name.upper()}",
+            "app": raw_name
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to launch {key}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to launch {raw_name}: {str(e)}")
 
 # Email Dispatch Endpoint
 @app.post("/api/email/send")
@@ -180,62 +225,7 @@ async def send_email_endpoint(req: EmailRequest):
 # Voice Intent Processing Endpoint
 @app.post("/api/voice/intent")
 async def process_voice_intent(req: VoiceIntentRequest):
-    cmd = req.command.lower().strip()
-
-    # Hardware stats request
-    if "stats" in cmd or "system" in cmd or "cpu" in cmd or "memory" in cmd or "ram" in cmd:
-        stats = get_system_telemetry()
-        return {
-            "status": "action_executed",
-            "intent": "system_stats",
-            "message": f"System telemetry retrieved: CPU {stats['cpu_percent']}%, RAM {stats['ram_percent']}% used ({stats['ram_used_gb']}/{stats['ram_total_gb']} GB). OS: {stats['os']}.",
-            "data": stats
-        }
-
-    # App launching
-    if "open" in cmd or "launch" in cmd or "start" in cmd:
-        for app_name in ["vscode", "code", "chrome", "browser", "notepad", "calculator", "calc", "terminal", "cmd"]:
-            if app_name in cmd:
-                res = await launch_system_app(AppLaunchRequest(appName=app_name))
-                return {
-                    "status": "action_executed",
-                    "intent": "launch_app",
-                    "message": f"NEXUS launching {app_name.upper()}...",
-                    "data": res
-                }
-
-    # Security check
-    if "security" in cmd or "audit" in cmd or "scan" in cmd:
-        res = await run_security_audit(SecurityAuditRequest(scanWorkspace=True))
-        return {
-            "status": "action_executed",
-            "intent": "security_audit",
-            "message": f"Security audit complete. Score: {res['securityScore']}/100. Vulnerabilities found: {len(res['vulnerabilities'])}.",
-            "data": res
-        }
-
-    # Email
-    if "send email" in cmd or "mail to" in cmd:
-        import re
-        email_match = re.search(r'[\w\.-]+@[\w\.-]+', cmd)
-        to_addr = email_match.group(0) if email_match else "recipient@example.com"
-        return {
-            "status": "action_executed",
-            "intent": "send_email",
-            "message": f"NEXUS email preview ready for {to_addr}.",
-            "data": await send_email_endpoint(EmailRequest(
-                to_email=to_addr,
-                subject="NEXUS Voice Assistant Message",
-                body=f"Message generated via NEXUS Voice Command: {req.command}"
-            ))
-        }
-
-    # Default: query AI model
-    return {
-        "status": "query",
-        "intent": "chat_query",
-        "command": req.command
-    }
+    return await parse_and_execute_voice_intent(req.command)
 
 # Security Audit Endpoint
 @app.post("/api/security/audit")
@@ -294,8 +284,8 @@ async def chat_stream(request: ChatRequest, background_tasks: BackgroundTasks):
                 query=request.query,
                 provider=request.provider,
                 api_key=request.apiKey,
-                ollama_url=request.ollamaUrl or "http://localhost:11434",
-                chat_model=request.chatModel or "llama3",
+                ollamaUrl=request.ollamaUrl or "http://localhost:11434",
+                chat_model=request.chatModel or "qwen2.5-coder:3b",
                 context_str=context_str
             )
             
