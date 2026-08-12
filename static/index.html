@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JARVIS Autonomous AI Assistant</title>
+    <!-- Google Fonts & Icons -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;800;900&family=Space+Mono:wght@700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="brand">
+                <span class="brand-logo">J</span>
+                <span class="brand-name">JARVIS</span>
+            </div>
+            
+            <button class="new-chat-btn" id="new-chat-btn">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                + New Session
+            </button>
+            
+            <div class="sidebar-section">
+                <div class="category-header">Conversations</div>
+                <div class="conv-list" id="conv-list"></div>
+            </div>
+
+            <div class="sidebar-footer">
+                <button class="settings-btn" id="jarvis-action-trigger-btn">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                    Action Center
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Workspace -->
+        <main class="chat-area">
+            <header class="chat-header">
+                <span class="active-chat-title" id="active-chat-title">JARVIS Command Center</span>
+                <div style="display: flex; gap: 10px;">
+                    <button class="jarvis-voice-btn" id="jarvis-voice-trigger-btn" title="Open Fullscreen JARVIS Voice Assistant">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+                        Voice Assistant
+                    </button>
+                </div>
+            </header>
+
+            <div class="chat-history" id="chat-history"></div>
+
+            <footer class="chat-footer">
+                <form class="chat-input-form" id="chat-form">
+                    <input type="text" id="query-input" placeholder="Type a command or say 'JARVIS wake up'..." autocomplete="off" required>
+                    <button type="submit" id="send-btn">Execute</button>
+                </form>
+            </footer>
+        </main>
+    </div>
+
+    <!-- Fullscreen JARVIS Voice Overlay -->
+    <div id="jarvis-voice-fullscreen" class="jarvis-voice-fullscreen" style="display: none;">
+        <button class="jarvis-voice-close-btn" id="jarvis-voice-close-btn">&times;</button>
+        
+        <div class="jarvis-voice-container">
+            <div class="jarvis-reactor-wrapper">
+                <div class="jarvis-ring ring-1"></div>
+                <div class="jarvis-ring ring-2"></div>
+                <div class="jarvis-ring ring-3"></div>
+                <div class="jarvis-reactor-core">
+                    <canvas id="jarvis-reactor-canvas" width="180" height="180"></canvas>
+                </div>
+            </div>
+
+            <div class="jarvis-voice-badge" id="jarvis-voice-status">JARVIS STANDBY</div>
+            <div class="jarvis-voice-transcript-box" id="jarvis-voice-transcript">Say "JARVIS wake up" or speak a command...</div>
+
+            <div class="jarvis-voice-hints">
+                <span>"JARVIS wake up"</span>
+                <span>"Open VS Code"</span>
+                <span>"Run security check"</span>
+                <span>"Send email to..."</span>
+                <span>"JARVIS sleep"</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Action Center Modal -->
+    <div class="modal-backdrop" id="action-modal" style="display: none;">
+        <div class="modal-content" style="max-width: 550px; width: 90%;">
+            <div class="modal-header">
+                <h3>JARVIS Action Center</h3>
+                <button class="modal-close" id="action-modal-close">&times;</button>
+            </div>
+            <div style="padding: 20px;">
+                <h4 style="margin-bottom: 10px; color: var(--cyan);">Launch OS Desktop Applications</h4>
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 20px;">
+                    <button class="action-btn" onclick="launchApp('vscode')">VS Code</button>
+                    <button class="action-btn" onclick="launchApp('chrome')">Chrome Browser</button>
+                    <button class="action-btn" onclick="launchApp('terminal')">Terminal / Command Prompt</button>
+                    <button class="action-btn" onclick="launchApp('notepad')">Notepad</button>
+                    <button class="action-btn" onclick="launchApp('calculator')">Calculator</button>
+                </div>
+
+                <h4 style="margin-bottom: 10px; color: var(--cyan);">Dispatch Automated Email</h4>
+                <input type="email" id="email-to" placeholder="Recipient email address" style="width: 100%; margin-bottom: 10px; padding: 10px; border-radius: 8px; background: rgba(255,255,255,0.05); color: white; border: 1px solid rgba(255,255,255,0.1);">
+                <input type="text" id="email-sub" placeholder="Subject" style="width: 100%; margin-bottom: 10px; padding: 10px; border-radius: 8px; background: rgba(255,255,255,0.05); color: white; border: 1px solid rgba(255,255,255,0.1);">
+                <textarea id="email-body" rows="3" placeholder="Email Body Message" style="width: 100%; margin-bottom: 12px; padding: 10px; border-radius: 8px; background: rgba(255,255,255,0.05); color: white; border: 1px solid rgba(255,255,255,0.1);"></textarea>
+                <button class="action-btn" onclick="sendJarvisEmail()" style="width: 100%; background: var(--cyan); color: black;">Send Email</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
