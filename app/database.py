@@ -5,7 +5,7 @@ import uuid
 from typing import List, Dict, Any, Optional
 
 class Database:
-    def __init__(self, db_path: str = "jarvis.db"):
+    def __init__(self, db_path: str = "nexus.db"):
         self.db_path = db_path
         self.init_db()
 
