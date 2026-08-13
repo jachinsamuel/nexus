@@ -1,5 +1,6 @@
 let isVoiceActive = false;
 let isSpeaking = false;
+let isProcessing = false;
 let recognition = null;
 let synth = window.speechSynthesis;
 
@@ -32,11 +33,20 @@ function setupEventListeners() {
     // Click Arc Reactor to Toggle Voice
     document.querySelector(".arc-container").addEventListener("click", toggleVoiceMode);
 
-    // Keyboard Shortcut (Space bar when not typing in input)
+    // Keyboard Shortcuts
     document.addEventListener("keydown", (e) => {
-        if (e.code === "Space" && document.activeElement.tagName !== "INPUT" && document.activeElement.tagName !== "TEXTAREA") {
+        const isInputActive = document.activeElement.tagName === "INPUT" || document.activeElement.tagName === "TEXTAREA";
+        
+        // Spacebar to toggle Voice Mode
+        if (e.code === "Space" && !isInputActive) {
             e.preventDefault();
             toggleVoiceMode();
+        }
+        
+        // '?' Key to toggle Shortcuts Modal
+        if (e.key === "?" && !isInputActive) {
+            e.preventDefault();
+            toggleShortcutsModal();
         }
     });
 
@@ -67,6 +77,11 @@ function toggleSettingsDrawer() {
     drawer.style.display = drawer.style.display === "none" ? "block" : "none";
 }
 
+function toggleShortcutsModal() {
+    const modal = document.getElementById("shortcuts-modal");
+    modal.style.display = modal.style.display === "none" ? "flex" : "none";
+}
+
 async function fetchTelemetry() {
     try {
         const res = await fetch("/api/system/stats");
@@ -74,6 +89,59 @@ async function fetchTelemetry() {
         document.getElementById("hdr-cpu").innerText = `CPU ${stats.cpu_percent}%`;
         document.getElementById("hdr-ram").innerText = `RAM ${stats.ram_used_gb}/${stats.ram_total_gb}GB`;
     } catch (err) {}
+}
+
+async function fetchProcessList() {
+    const box = document.getElementById("proc-list-box");
+    box.innerHTML = "Loading processes...";
+    try {
+        const res = await fetch("/api/system/processes");
+        const procs = await res.json();
+        box.innerHTML = "";
+        procs.forEach(p => {
+            const item = document.createElement("div");
+            item.className = "proc-item";
+            item.innerHTML = `
+                <span>${p.name} (RAM ${p.memory_percent}%)</span>
+                <button class="proc-kill-btn" onclick="killProcess('${p.pid}')">Kill</button>
+            `;
+            box.appendChild(item);
+        });
+    } catch (err) {
+        box.innerText = "Error loading processes.";
+    }
+}
+
+async function killProcess(target) {
+    try {
+        const res = await fetch("/api/system/process/kill", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name: target })
+        });
+        const data = await res.json();
+        alert(data.message);
+        fetchProcessList();
+    } catch (err) {
+        alert("Failed to kill process: " + err.message);
+    }
+}
+
+function copyStreamResponse() {
+    const text = document.getElementById("stream-text").innerText;
+    if (text) {
+        navigator.clipboard.writeText(text);
+        const copyBtn = document.querySelector(".copy-btn");
+        copyBtn.innerText = "✓ Copied";
+        setTimeout(() => { copyBtn.innerText = "📋 Copy"; }, 2000);
+    }
+}
+
+function closeStreamResponse() {
+    const streamBox = document.getElementById("response-stream-box");
+    const streamText = document.getElementById("stream-text");
+    streamText.innerText = "";
+    streamBox.style.display = "none";
 }
 
 // Voice Recognition setup
@@ -87,6 +155,8 @@ function initSpeechRecognition() {
     recognition.lang = "en-US";
 
     recognition.onresult = (event) => {
+        if (isProcessing || isSpeaking) return;
+
         let transcript = "";
         for (let i = event.resultIndex; i < event.results.length; i++) {
             transcript += event.results[i][0].transcript;
@@ -101,7 +171,7 @@ function initSpeechRecognition() {
     };
 
     recognition.onend = () => {
-        if (isVoiceActive) {
+        if (isVoiceActive && !isProcessing && !isSpeaking) {
             try { recognition.start(); } catch (e) {}
         }
     };
@@ -113,8 +183,10 @@ function toggleVoiceMode() {
 
     if (isVoiceActive) {
         micBtn.classList.add("active");
-        updateReactorState("LISTENING", "Listening for command or query...");
-        try { recognition.start(); } catch (e) {}
+        if (!isProcessing && !isSpeaking) {
+            updateReactorState("LISTENING", "Listening for command or query...");
+            try { recognition.start(); } catch (e) {}
+        }
     } else {
         micBtn.classList.remove("active");
         updateReactorState("STANDBY", "Click Arc Reactor or press Space for voice mode");
@@ -137,9 +209,15 @@ function updateReactorState(state, transcriptText) {
 }
 
 async function handleVoiceIntent(cmdText) {
-    if (!cmdText || isSpeaking) return;
+    if (!cmdText || isSpeaking || isProcessing) return;
+
+    isProcessing = true;
+    if (recognition) {
+        try { recognition.stop(); } catch (e) {}
+    }
 
     if (cmdText.includes("sleep") || cmdText.includes("standby")) {
+        isProcessing = false;
         toggleVoiceMode();
         speakText("Entering standby mode.");
         return;
@@ -163,7 +241,11 @@ async function handleVoiceIntent(cmdText) {
             await executeQuery(cmdText);
         }
     } catch (err) {
+        isProcessing = false;
         updateReactorState("STANDBY", "Error: " + err.message);
+        if (isVoiceActive && recognition) {
+            try { recognition.start(); } catch (e) {}
+        }
     }
 }
 
@@ -187,9 +269,9 @@ async function executeQuery(query) {
     const streamRole = document.getElementById("stream-role");
     const streamText = document.getElementById("stream-text");
 
-    streamBox.style.display = "block";
-    streamRole.innerText = "NEXUS // COMPUTE CORE";
     streamText.innerText = "";
+    streamBox.style.display = "none";
+    streamRole.innerText = "NEXUS // COMPUTE CORE";
 
     try {
         const res = await fetch("/api/stream", {
@@ -205,20 +287,40 @@ async function executeQuery(query) {
 
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
+        let buffer = "";
 
         while (true) {
             const { done, value } = await reader.read();
             if (done) break;
 
-            const chunk = decoder.decode(value);
-            const lines = chunk.split("\n\n");
+            buffer += decoder.decode(value, { stream: true });
+            const events = buffer.split("\n\n");
+            buffer = events.pop() || "";
 
-            for (const line of lines) {
-                if (line.startsWith("event: token")) {
-                    const jsonStr = line.replace("event: token\ndata: ", "");
+            for (const eventStr of events) {
+                const lines = eventStr.split("\n");
+                let eventType = "";
+                let eventData = "";
+
+                for (const l of lines) {
+                    const trimmed = l.trim();
+                    if (trimmed.startsWith("event:")) eventType = trimmed.replace("event:", "").trim();
+                    else if (trimmed.startsWith("data:")) eventData = trimmed.replace("data:", "").trim();
+                }
+
+                if (eventType === "token" && eventData) {
                     try {
-                        const token = JSON.parse(jsonStr);
-                        streamText.innerText += token;
+                        const token = JSON.parse(eventData);
+                        if (token !== undefined && token !== null) {
+                            streamBox.style.display = "block";
+                            streamText.innerText += token;
+                        }
+                    } catch (e) {}
+                } else if (eventType === "error" && eventData) {
+                    try {
+                        const err = JSON.parse(eventData);
+                        streamBox.style.display = "block";
+                        streamText.innerText = "Execution Error: " + err;
                     } catch (e) {}
                 }
             }
@@ -227,11 +329,19 @@ async function executeQuery(query) {
         updateReactorState("SPEAKING", "Response ready");
         if (isVoiceActive) {
             speakText(streamText.innerText);
+        } else {
+            isProcessing = false;
+            updateReactorState("STANDBY", "Click Arc Reactor or press Space for voice mode");
         }
 
     } catch (err) {
+        isProcessing = false;
+        streamBox.style.display = "block";
         streamText.innerText = "Execution Error: " + err.message;
         updateReactorState("STANDBY", "Error occurred");
+        if (isVoiceActive && recognition) {
+            try { recognition.start(); } catch (e) {}
+        }
     }
 }
 
@@ -240,13 +350,21 @@ function displayStreamResponse(role, text) {
     const streamRole = document.getElementById("stream-role");
     const streamText = document.getElementById("stream-text");
 
+    if (!text || !text.trim()) {
+        streamBox.style.display = "none";
+        return;
+    }
+
     streamBox.style.display = "block";
     streamRole.innerText = role;
     streamText.innerText = text;
 }
 
 function speakText(text) {
-    if (!synth) return;
+    if (!synth) {
+        isProcessing = false;
+        return;
+    }
     synth.cancel();
 
     const utterance = new SpeechSynthesisUtterance(text);
@@ -259,8 +377,23 @@ function speakText(text) {
 
     utterance.onend = () => {
         isSpeaking = false;
-        if (isVoiceActive) updateReactorState("LISTENING", "Listening...");
-        else updateReactorState("STANDBY", "Click Arc Reactor or press Space for voice mode");
+        isProcessing = false;
+        if (isVoiceActive) {
+            updateReactorState("LISTENING", "Listening for command or query...");
+            if (recognition) {
+                try { recognition.start(); } catch (e) {}
+            }
+        } else {
+            updateReactorState("STANDBY", "Click Arc Reactor or press Space for voice mode");
+        }
+    };
+
+    utterance.onerror = () => {
+        isSpeaking = false;
+        isProcessing = false;
+        if (isVoiceActive && recognition) {
+            try { recognition.start(); } catch (e) {}
+        }
     };
 
     synth.speak(utterance);
@@ -280,67 +413,92 @@ async function launchApp(appName) {
     }
 }
 
-// Precise Mechanical Canvas Arc Reactor Renderer
+// Sleek High-End Audio Spectrum & Arc Ring Renderer
 function initArcCanvas() {
     const canvas = document.getElementById("arc-canvas");
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
 
+    // DPI Scaling for razor-sharp rendering
+    const dpi = window.devicePixelRatio || 2;
+    canvas.width = 235 * dpi;
+    canvas.height = 235 * dpi;
+
     let angle = 0;
 
     function render() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        const cx = canvas.width / 2;
-        const cy = canvas.height / 2;
+        ctx.save();
+        ctx.scale(dpi, dpi);
 
-        // Core Pulse
-        const coreRadius = 55 + Math.sin(angle * 2) * (isSpeaking ? 6 : 2);
-        const grad = ctx.createRadialGradient(cx, cy, 5, cx, cy, coreRadius);
-        grad.addColorStop(0, "rgba(56, 189, 248, 0.95)");
-        grad.addColorStop(0.6, "rgba(56, 189, 248, 0.25)");
-        grad.addColorStop(1, "transparent");
+        const cx = 117.5;
+        const cy = 117.5;
 
-        ctx.fillStyle = grad;
-        ctx.beginPath();
-        ctx.arc(cx, cy, coreRadius, 0, Math.PI * 2);
-        ctx.fill();
+        // 1. Rotating Outer Ticks Ring
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(angle * 0.3);
+        ctx.lineWidth = 1;
+        for (let i = 0; i < 48; i++) {
+            const rot = (i / 48) * Math.PI * 2;
+            const isMajor = i % 12 === 0;
+            const len = isMajor ? 8 : 4;
+            const r1 = 112;
+            const r2 = r1 - len;
 
-        // Mechanical Segment Arc Ring
-        const segments = 12;
-        ctx.lineWidth = 4;
-        ctx.strokeStyle = isSpeaking ? "#38bdf8" : "rgba(255, 255, 255, 0.4)";
-
-        for (let i = 0; i < segments; i++) {
-            const startAng = (i / segments) * Math.PI * 2 + angle;
-            const endAng = startAng + (Math.PI / segments) * 0.7;
-
+            ctx.strokeStyle = isMajor ? "#00f0ff" : "rgba(0, 240, 255, 0.25)";
+            ctx.lineWidth = isMajor ? 2 : 1;
             ctx.beginPath();
-            ctx.arc(cx, cy, 78, startAng, endAng);
+            ctx.moveTo(Math.cos(rot) * r1, Math.sin(rot) * r1);
+            ctx.lineTo(Math.cos(rot) * r2, Math.sin(rot) * r2);
             ctx.stroke();
         }
+        ctx.restore();
 
-        // Frequency Spikes when speaking
+        // 2. High-Frequency Audio Waveform Bars on Speech
         if (isSpeaking) {
-            const spikes = 32;
-            for (let i = 0; i < spikes; i++) {
-                const sAngle = (i / spikes) * Math.PI * 2 + (angle * 3);
-                const len = 10 + Math.random() * 25;
+            ctx.save();
+            ctx.translate(cx, cy);
+            const numBars = 64;
+            const radius = 94;
 
-                const x1 = cx + Math.cos(sAngle) * 88;
-                const y1 = cy + Math.sin(sAngle) * 88;
-                const x2 = cx + Math.cos(sAngle) * (88 + len);
-                const y2 = cy + Math.sin(sAngle) * (88 + len);
+            for (let i = 0; i < numBars; i++) {
+                const barAngle = (i / numBars) * Math.PI * 2 + angle;
+                const barHeight = 8 + Math.random() * 22;
 
-                ctx.strokeStyle = "rgba(56, 189, 248, 0.8)";
+                const x1 = Math.cos(barAngle) * radius;
+                const y1 = Math.sin(barAngle) * radius;
+                const x2 = Math.cos(barAngle) * (radius + barHeight);
+                const y2 = Math.sin(barAngle) * (radius + barHeight);
+
+                ctx.strokeStyle = "rgba(0, 240, 255, 0.9)";
                 ctx.lineWidth = 2;
                 ctx.beginPath();
                 ctx.moveTo(x1, y1);
                 ctx.lineTo(x2, y2);
                 ctx.stroke();
             }
+            ctx.restore();
         }
 
-        angle += isSpeaking ? 0.05 : 0.015;
+        // 3. Smooth Inner Pulsing Wave Arc
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(-angle * 0.5);
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.7)";
+        ctx.lineWidth = 2.5;
+        const waveArc = Math.PI * 0.4;
+        ctx.beginPath();
+        ctx.arc(0, 0, 88, 0, waveArc);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.arc(0, 0, 88, Math.PI, Math.PI + waveArc);
+        ctx.stroke();
+        ctx.restore();
+
+        ctx.restore();
+        angle += isSpeaking ? 0.04 : 0.015;
         requestAnimationFrame(render);
     }
 

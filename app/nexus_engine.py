@@ -53,6 +53,59 @@ def get_system_telemetry() -> Dict[str, Any]:
         "boot_time": boot_time
     }
 
+def get_top_processes(limit: int = 8) -> List[Dict[str, Any]]:
+    """Fetches top running OS processes sorted by memory usage."""
+    procs = []
+    for proc in psutil.process_iter(['pid', 'name', 'cpu_percent', 'memory_percent']):
+        try:
+            info = proc.info
+            if info and info.get('name'):
+                info['memory_percent'] = round(info.get('memory_percent') or 0, 1)
+                info['cpu_percent'] = round(info.get('cpu_percent') or 0, 1)
+                procs.append(info)
+        except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+            pass
+    procs.sort(key=lambda p: p.get('memory_percent', 0), reverse=True)
+    return procs[:limit]
+
+def terminate_process_by_name(proc_name: str) -> Dict[str, Any]:
+    """Terminates process by name or PID."""
+    target = proc_name.lower().strip()
+    killed = []
+    for proc in psutil.process_iter(['pid', 'name']):
+        try:
+            p_name = (proc.info.get('name') or "").lower()
+            p_pid = str(proc.info.get('pid') or "")
+            if target == p_pid or target in p_name or (p_name and p_name.startswith(target)):
+                proc.terminate()
+                killed.append(f"{proc.info['name']} (PID {proc.info['pid']})")
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            pass
+    if killed:
+        return {"status": "success", "message": f"Terminated {len(killed)} process(es): {', '.join(killed)}"}
+    return {"status": "error", "message": f"No running process matching '{proc_name}' was found."}
+
+def get_clipboard_content() -> str:
+    """Reads system clipboard text using powershell on Windows."""
+    try:
+        if platform.system() == "Windows":
+            res = subprocess.run(["powershell", "-command", "Get-Clipboard"], capture_output=True, text=True)
+            return res.stdout.strip()
+    except Exception:
+        pass
+    return ""
+
+def set_clipboard_content(text: str) -> bool:
+    """Writes text to system clipboard."""
+    try:
+        if platform.system() == "Windows":
+            escaped = text.replace("'", "''")
+            subprocess.run(["powershell", "-command", f"Set-Clipboard -Value '{escaped}'"], capture_output=True, text=True)
+            return True
+    except Exception:
+        pass
+    return False
+
 async def execute_git_command(git_cmd: str, extra_args: str = "") -> Dict[str, Any]:
     """Executes safe git commands (status, log, diff, branch, add, commit, push)."""
     import subprocess
@@ -192,7 +245,66 @@ async def parse_and_execute_voice_intent(command_raw: str) -> Dict[str, Any]:
                 except Exception as e:
                     return {"status": "error", "message": f"Failed to open project {matched_proj_name}: {str(e)}"}
 
-    # 2. Hardware Stats
+    # 2. Time & Date Queries
+    if "time" in clean_cmd or "date" in clean_cmd or "clock" in clean_cmd:
+        now = datetime.now()
+        formatted_time = now.strftime("%I:%M:%S %p")
+        formatted_date = now.strftime("%A, %B %d, %Y")
+        
+        if "time" in clean_cmd:
+            msg = f"Current Time: {formatted_time} ({formatted_date})"
+        else:
+            msg = f"Current Date: {formatted_date} ({formatted_time})"
+            
+        return {
+            "status": "action_executed",
+            "intent": "time_date_query",
+            "message": f"NEXUS Temporal Data:\n• {msg}",
+            "data": {"time": formatted_time, "date": formatted_date}
+        }
+
+    # 3. Clipboard Reader
+    if "clipboard" in clean_cmd:
+        clip_text = get_clipboard_content()
+        if clip_text:
+            return {
+                "status": "action_executed",
+                "intent": "read_clipboard",
+                "message": f"NEXUS Clipboard Content:\n\"{clip_text[:400]}\"",
+                "data": {"clipboard": clip_text}
+            }
+        else:
+            return {
+                "status": "action_executed",
+                "intent": "read_clipboard",
+                "message": "NEXUS Clipboard is currently empty.",
+                "data": {"clipboard": ""}
+            }
+
+    # 3. OS Process Manager & Process Kill
+    if "kill" in clean_cmd or "terminate" in clean_cmd or "stop process" in clean_cmd or "close process" in clean_cmd:
+        m = re.search(r'(kill|terminate|stop process|close process)\s+(.+)', clean_cmd)
+        target_p = m.group(2).strip() if m else clean_cmd.replace("kill", "").replace("terminate", "").strip()
+        if target_p:
+            res = terminate_process_by_name(target_p)
+            return {
+                "status": "action_executed",
+                "intent": "kill_process",
+                "message": res["message"],
+                "data": res
+            }
+
+    if "top processes" in clean_cmd or "list processes" in clean_cmd or "process list" in clean_cmd or "running tasks" in clean_cmd:
+        procs = get_top_processes(limit=6)
+        proc_summary = ", ".join([f"{p['name']} ({p['memory_percent']}%)" for p in procs])
+        return {
+            "status": "action_executed",
+            "intent": "list_processes",
+            "message": f"Top Running OS Processes:\n{proc_summary}",
+            "data": procs
+        }
+
+    # 4. Hardware Stats
     if "stats" in clean_cmd or "system" in clean_cmd or "cpu" in clean_cmd or "memory" in clean_cmd or "ram" in clean_cmd:
         stats = get_system_telemetry()
         return {
@@ -527,14 +639,15 @@ async def generate_llm_response(
         prompt_content = f"{system_prompt}\n\n[USER REQUEST]\n{query}"
 
     # Provider: Ollama (Local)
-    if provider == "ollama" or chat_model.startswith("ollama") or chat_model in ["llama3", "mistral", "qwen2.5", "phi3"]:
+    if provider == "ollama" or chat_model.startswith("ollama") or chat_model in ["llama3", "mistral", "qwen2.5-coder:3b", "phi3"]:
         target_url = ollama_url or "http://localhost:11434"
         model_name = chat_model.replace("ollama/", "") if chat_model.startswith("ollama/") else chat_model
-        if model_name == "ollama" or model_name == "gemini":
-            model_name = "llama3"
+        if model_name == "ollama" or model_name == "gemini" or model_name == "llama3":
+            model_name = "qwen2.5-coder:3b"
             
         try:
             async with httpx.AsyncClient() as client:
+                # Try generating with specified model
                 res = await client.post(
                     f"{target_url.rstrip('/')}/api/generate",
                     json={
@@ -544,6 +657,22 @@ async def generate_llm_response(
                     },
                     timeout=60.0
                 )
+                if res.status_code == 404:
+                    # Model not found: query available models from Ollama
+                    tags_res = await client.get(f"{target_url.rstrip('/')}/api/tags", timeout=5.0)
+                    if tags_res.status_code == 200:
+                        models = tags_res.json().get("models", [])
+                        if models:
+                            model_name = models[0].get("name", "qwen2.5-coder:3b")
+                            res = await client.post(
+                                f"{target_url.rstrip('/')}/api/generate",
+                                json={
+                                    "model": model_name,
+                                    "prompt": prompt_content,
+                                    "stream": False
+                                },
+                                timeout=60.0
+                            )
                 res.raise_for_status()
                 data = res.json()
                 return data.get("response", "NEXUS received response from local model.")

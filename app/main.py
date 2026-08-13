@@ -23,6 +23,10 @@ from app.nexus_engine import (
     get_embedding, 
     search_ddg,
     get_system_telemetry,
+    get_top_processes,
+    terminate_process_by_name,
+    get_clipboard_content,
+    set_clipboard_content,
     execute_python_code,
     execute_git_command,
     parse_and_execute_voice_intent,
@@ -114,6 +118,27 @@ async def list_skills():
 @app.get("/api/system/stats")
 async def get_system_stats():
     return get_system_telemetry()
+
+# OS Process Manager Endpoints
+@app.get("/api/system/processes")
+async def list_processes():
+    return get_top_processes(limit=10)
+
+@app.post("/api/system/process/kill")
+async def kill_process(data: Dict[str, str]):
+    target = data.get("name") or data.get("pid") or ""
+    return terminate_process_by_name(target)
+
+# OS Clipboard Endpoints
+@app.get("/api/clipboard/read")
+async def read_clipboard():
+    return {"content": get_clipboard_content()}
+
+@app.post("/api/clipboard/write")
+async def write_clipboard(data: Dict[str, str]):
+    text = data.get("content", "")
+    success = set_clipboard_content(text)
+    return {"status": "success" if success else "error"}
 
 # Workspace File Operations Endpoints
 @app.get("/api/files/list")

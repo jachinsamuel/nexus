@@ -1,9 +1,9 @@
 :root {
-    --bg-dark: #08090d;
-    --bg-panel: rgba(18, 20, 28, 0.85);
-    --border-color: rgba(255, 255, 255, 0.07);
-    --accent-blue: #38bdf8;
-    --accent-glow: rgba(56, 189, 248, 0.15);
+    --bg-dark: #060913;
+    --bg-panel: rgba(10, 14, 26, 0.94);
+    --border-color: rgba(0, 240, 255, 0.18);
+    --accent-blue: #00f0ff;
+    --accent-glow: rgba(0, 240, 255, 0.35);
     --text-main: #f1f5f9;
     --text-muted: #64748b;
     --font-heading: 'Space Grotesk', sans-serif;
@@ -22,9 +22,11 @@ body {
     color: var(--text-main);
     height: 100vh;
     overflow: hidden;
+    /* Clean Grid Mesh matching reference image */
     background-image: 
-        radial-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px);
-    background-size: 32px 32px;
+        linear-gradient(rgba(0, 240, 255, 0.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 240, 255, 0.035) 1px, transparent 1px);
+    background-size: 36px 36px;
 }
 
 .viewport {
@@ -43,8 +45,9 @@ body {
     align-items: center;
     justify-content: space-between;
     border-bottom: 1px solid var(--border-color);
-    background: rgba(8, 9, 13, 0.7);
+    background: rgba(6, 9, 19, 0.85);
     backdrop-filter: blur(12px);
+    z-index: 10;
 }
 
 .brand {
@@ -101,16 +104,17 @@ body {
     font-size: 0.9rem;
 }
 
-/* Arc Reactor Workspace */
+/* Sleek Focal Arc Reactor Workspace */
 .reactor-workspace {
     flex: 1;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 32px;
+    gap: 24px;
     padding: 20px;
     position: relative;
+    overflow-y: auto;
 }
 
 .arc-container {
@@ -121,44 +125,124 @@ body {
     align-items: center;
     justify-content: center;
     cursor: pointer;
+    transition: transform 0.3s ease;
 }
 
-.arc-ring {
+.arc-container:hover {
+    transform: scale(1.03);
+}
+
+/* Corner HUD Reticles matching reference image */
+.hud-corner {
     position: absolute;
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(0, 240, 255, 0.75);
+    pointer-events: none;
+    z-index: 6;
+}
+
+.hud-corner.top-left {
+    top: -12px;
+    left: -12px;
+    border-right: none;
+    border-bottom: none;
+}
+
+.hud-corner.top-right {
+    top: -12px;
+    right: -12px;
+    border-left: none;
+    border-bottom: none;
+}
+
+.hud-corner.bottom-left {
+    bottom: -12px;
+    left: -12px;
+    border-right: none;
+    border-top: none;
+}
+
+.hud-corner.bottom-right {
+    bottom: -12px;
+    right: -12px;
+    border-left: none;
+    border-top: none;
+}
+
+/* Precision Outer Orbiting Arc Ring */
+.neon-ring-outer {
+    position: absolute;
+    inset: -6px;
     border-radius: 50%;
-    border: 1px solid transparent;
-    transition: all 0.4s ease;
+    border: 1px dashed rgba(0, 240, 255, 0.35);
+    animation: rotateClockwise 25s linear infinite;
 }
 
-.ring-outer {
-    inset: 0;
-    border: 1px dashed rgba(255, 255, 255, 0.15);
-    animation: rotateClockwise 30s linear infinite;
+/* Vibrant Electric Neon Ring matching reference image */
+.neon-ring-glow {
+    position: absolute;
+    width: 235px;
+    height: 235px;
+    border-radius: 50%;
+    border: 3.5px solid #00f0ff;
+    box-shadow: 
+        0 0 25px #00f0ff,
+        0 0 50px rgba(0, 240, 255, 0.6),
+        inset 0 0 25px #00f0ff,
+        inset 0 0 50px rgba(0, 240, 255, 0.6);
+    animation: neonPulse 3s ease-in-out infinite alternate;
+    z-index: 2;
 }
 
-.ring-mid {
-    inset: 20px;
-    border-top: 2px solid var(--accent-blue);
-    border-bottom: 2px solid rgba(255, 255, 255, 0.1);
-    animation: rotateCounter 20s linear infinite;
-}
-
-.ring-inner {
-    inset: 40px;
-    border-left: 2px solid var(--accent-blue);
-    animation: rotateClockwise 12s linear infinite;
-}
-
+/* Sleek Inner Core Wrapper */
 .arc-core-wrapper {
-    width: 200px;
-    height: 200px;
+    position: relative;
+    width: 235px;
+    height: 235px;
     border-radius: 50%;
-    background: radial-gradient(circle, rgba(56, 189, 248, 0.12) 0%, rgba(8, 9, 13, 0.9) 75%);
     display: flex;
     align-items: center;
     justify-content: center;
-    border: 1px solid rgba(56, 189, 248, 0.3);
-    box-shadow: 0 0 40px var(--accent-glow);
+    z-index: 3;
+}
+
+#arc-canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 4;
+}
+
+/* Deep Obsidian Glass Inner Circle */
+.arc-glass-core {
+    position: relative;
+    width: 165px;
+    height: 165px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(6, 9, 19, 0.96) 0%, rgba(2, 6, 14, 0.99) 100%);
+    border: 2px solid rgba(0, 240, 255, 0.7);
+    box-shadow: 
+        0 0 20px rgba(0, 240, 255, 0.35),
+        inset 0 0 20px rgba(0, 240, 255, 0.35);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 5;
+    pointer-events: none;
+}
+
+/* Spaced White Glowing Brand Text matching reference image */
+.arc-brand-text {
+    font-family: var(--font-heading);
+    font-size: 1.25rem;
+    font-weight: 700;
+    letter-spacing: 6px;
+    color: #ffffff;
+    text-shadow: 
+        0 0 12px #00f0ff,
+        0 0 25px rgba(0, 240, 255, 0.9);
 }
 
 .status-display {
@@ -167,6 +251,7 @@ body {
     align-items: center;
     gap: 8px;
     text-align: center;
+    margin-top: 10px;
 }
 
 .status-state {
@@ -186,24 +271,70 @@ body {
     word-break: break-word;
 }
 
-/* Streaming Box */
+/* Floating Answer & Stream Box */
 .response-stream-box {
-    width: 600px;
+    width: 660px;
     max-width: 90%;
-    background: rgba(15, 18, 26, 0.9);
+    background: rgba(10, 14, 26, 0.96);
     border: 1px solid var(--border-color);
     border-radius: 12px;
     padding: 16px 20px;
-    backdrop-filter: blur(10px);
+    backdrop-filter: blur(16px);
     animation: fadeIn 0.3s ease;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+}
+
+.stream-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .stream-role {
     font-family: var(--font-mono);
     font-size: 0.75rem;
     color: var(--accent-blue);
-    margin-bottom: 8px;
     letter-spacing: 2px;
+}
+
+.stream-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.copy-btn {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border-color);
+    color: var(--text-muted);
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-size: 0.7rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.copy-btn:hover {
+    border-color: var(--accent-blue);
+    color: var(--text-main);
+}
+
+.close-stream-btn {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 1.1rem;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0 4px;
+    transition: color 0.2s ease;
+}
+
+.close-stream-btn:hover {
+    color: #ef4444;
 }
 
 .stream-text {
@@ -216,17 +347,17 @@ body {
 
 /* Floating Control Bar */
 .control-footer {
-    padding: 24px;
+    padding: 20px 24px 28px;
     display: flex;
     justify-content: center;
 }
 
 .cmd-form {
-    width: 640px;
+    width: 680px;
     max-width: 95%;
     display: flex;
     align-items: center;
-    background: rgba(18, 20, 28, 0.9);
+    background: rgba(14, 18, 28, 0.92);
     border: 1px solid var(--border-color);
     border-radius: 30px;
     padding: 6px 12px;
@@ -290,12 +421,13 @@ body {
     right: 0;
     width: 340px;
     height: 100vh;
-    background: rgba(12, 14, 20, 0.96);
+    background: rgba(10, 14, 24, 0.97);
     border-left: 1px solid var(--border-color);
     backdrop-filter: blur(20px);
     z-index: 999;
     padding: 24px;
     animation: slideIn 0.3s ease;
+    overflow-y: auto;
 }
 
 .drawer-header {
@@ -341,34 +473,58 @@ body {
     border-color: var(--accent-blue);
 }
 
-.app-quick-btns {
+.proc-box {
+    margin-top: 8px;
     display: flex;
-    gap: 8px;
-    margin-top: 10px;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 180px;
+    overflow-y: auto;
 }
 
-.app-btn {
-    flex: 1;
-    padding: 8px;
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid var(--border-color);
-    color: var(--text-main);
+.proc-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(0, 0, 0, 0.4);
+    padding: 6px 10px;
     border-radius: 6px;
+    font-family: var(--font-mono);
     font-size: 0.75rem;
+}
+
+.proc-kill-btn {
+    background: rgba(239, 68, 68, 0.2);
+    border: 1px solid rgba(239, 68, 68, 0.4);
+    color: #f87171;
+    border-radius: 4px;
+    padding: 2px 6px;
     cursor: pointer;
 }
 
-.app-btn:hover {
-    border-color: var(--accent-blue);
-    background: rgba(56, 189, 248, 0.1);
+.proc-kill-btn:hover {
+    background: rgba(239, 68, 68, 0.4);
 }
 
 @keyframes rotateClockwise {
     to { transform: rotate(360deg); }
 }
 
-@keyframes rotateCounter {
-    to { transform: rotate(-360deg); }
+@keyframes neonPulse {
+    from {
+        box-shadow: 
+            0 0 20px #00f0ff,
+            0 0 35px rgba(0, 240, 255, 0.5),
+            inset 0 0 20px #00f0ff,
+            inset 0 0 35px rgba(0, 240, 255, 0.5);
+    }
+    to {
+        box-shadow: 
+            0 0 32px #00f0ff,
+            0 0 65px rgba(0, 240, 255, 0.8),
+            inset 0 0 32px #00f0ff,
+            inset 0 0 65px rgba(0, 240, 255, 0.8);
+    }
 }
 
 @keyframes fadeIn {

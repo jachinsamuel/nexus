@@ -28,14 +28,23 @@
             </div>
         </header>
 
-        <!-- Main Focal Workspace: The Arc Reactor Engine -->
+        <!-- Main Focal Workspace: Sleek Ultra-High-End Arc Core -->
         <main class="reactor-workspace">
             <div class="arc-container">
-                <div class="arc-ring ring-outer"></div>
-                <div class="arc-ring ring-mid"></div>
-                <div class="arc-ring ring-inner"></div>
+                <!-- Corner HUD Reticles matching reference image -->
+                <div class="hud-corner top-left"></div>
+                <div class="hud-corner top-right"></div>
+                <div class="hud-corner bottom-left"></div>
+                <div class="hud-corner bottom-right"></div>
+
+                <div class="neon-ring-outer"></div>
+                <div class="neon-ring-glow"></div>
+
                 <div class="arc-core-wrapper">
-                    <canvas id="arc-canvas" width="280" height="280"></canvas>
+                    <canvas id="arc-canvas" width="400" height="400"></canvas>
+                    <div class="arc-glass-core">
+                        <span class="arc-brand-text">NEXUS</span>
+                    </div>
                 </div>
             </div>
 
@@ -44,9 +53,15 @@
                 <div class="status-transcript" id="nexus-transcript">Click the Arc Reactor or press space to initiate voice mode</div>
             </div>
 
-            <!-- Sleek Minimal Response Stream -->
+            <!-- Floating Answer & Stream Box -->
             <div class="response-stream-box" id="response-stream-box" style="display: none;">
-                <div class="stream-role" id="stream-role">NEXUS</div>
+                <div class="stream-header">
+                    <span class="stream-role" id="stream-role">NEXUS // RESPONSE CORE</span>
+                    <div class="stream-actions">
+                        <button class="copy-btn" onclick="copyStreamResponse()" title="Copy to Clipboard">📋 Copy</button>
+                        <button class="close-stream-btn" onclick="closeStreamResponse()" title="Close Box">&times;</button>
+                    </div>
+                </div>
                 <div class="stream-text" id="stream-text"></div>
             </div>
         </main>
@@ -57,7 +72,7 @@
                 <button type="button" class="mic-btn" id="mic-trigger" title="Toggle Voice Activation">
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
                 </button>
-                <input type="text" id="cmd-input" placeholder="Execute command or query NEXUS..." autocomplete="off" required>
+                <input type="text" id="cmd-input" placeholder="Ask NEXUS a question or execute command..." autocomplete="off" required>
                 <button type="submit" class="send-btn" title="Send Command">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
                 </button>
@@ -65,7 +80,7 @@
         </footer>
     </div>
 
-    <!-- Hidden Professional Settings Drawer -->
+    <!-- Hidden Settings Drawer -->
     <div class="settings-drawer" id="settings-drawer" style="display: none;">
         <div class="drawer-header">
             <span>ENGINE CONFIGURATION</span>
@@ -89,12 +104,9 @@
             <input type="text" id="model-input" class="clean-input" value="qwen2.5-coder:3b">
 
             <div style="margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 16px;">
-                <label class="field-label">Quick App Launcher</label>
-                <div class="app-quick-btns">
-                    <button class="app-btn" onclick="launchApp('vscode')">VS Code</button>
-                    <button class="app-btn" onclick="launchApp('chrome')">Chrome</button>
-                    <button class="app-btn" onclick="launchApp('terminal')">Terminal</button>
-                </div>
+                <label class="field-label">OS Process Manager</label>
+                <button class="app-btn" onclick="fetchProcessList()" style="width: 100%; margin-bottom: 8px;">Refresh Top Processes</button>
+                <div id="proc-list-box" class="proc-box"></div>
             </div>
         </div>
     </div>
