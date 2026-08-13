@@ -10,6 +10,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 function initApp() {
     setupEventListeners();
+    loadSavedEngineConfig();
     initSpeechRecognition();
     initArcCanvas();
     fetchTelemetry();
@@ -75,6 +76,43 @@ function setupEventListeners() {
 function toggleSettingsDrawer() {
     const drawer = document.getElementById("settings-drawer");
     drawer.style.display = drawer.style.display === "none" ? "block" : "none";
+}
+
+function saveEngineConfig() {
+    const prov = document.getElementById("provider-select").value;
+    const apiKey = document.getElementById("api-key-input").value;
+    const model = document.getElementById("model-input").value;
+
+    localStorage.setItem("nexus_provider", prov);
+    localStorage.setItem("nexus_api_key", apiKey);
+    localStorage.setItem("nexus_model", model);
+
+    const msg = document.getElementById("save-status-msg");
+    msg.innerText = "✓ Configuration saved.";
+    msg.style.display = "block";
+    setTimeout(() => { msg.style.display = "none"; }, 2500);
+}
+
+function loadSavedEngineConfig() {
+    const savedProv = localStorage.getItem("nexus_provider");
+    const savedKey = localStorage.getItem("nexus_api_key");
+    const savedModel = localStorage.getItem("nexus_model");
+
+    if (savedProv) {
+        document.getElementById("provider-select").value = savedProv;
+        const keyGroup = document.getElementById("key-field-group");
+        if (savedProv === "ollama") {
+            keyGroup.style.display = "none";
+        } else {
+            keyGroup.style.display = "block";
+        }
+    }
+    if (savedKey) {
+        document.getElementById("api-key-input").value = savedKey;
+    }
+    if (savedModel) {
+        document.getElementById("model-input").value = savedModel;
+    }
 }
 
 function toggleShortcutsModal() {
@@ -235,7 +273,7 @@ async function handleVoiceIntent(cmdText) {
 
         if (data.status === "action_executed") {
             displayStreamResponse("NEXUS ACTION", data.message);
-            updateReactorState("SPEAKING", data.message);
+            updateReactorState("SPEAKING", "Response ready");
             speakText(data.message);
         } else {
             await executeQuery(cmdText);

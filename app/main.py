@@ -309,7 +309,7 @@ async def chat_stream(request: ChatRequest, background_tasks: BackgroundTasks):
                 query=request.query,
                 provider=request.provider,
                 api_key=request.apiKey,
-                ollamaUrl=request.ollamaUrl or "http://localhost:11434",
+                ollama_url=request.ollamaUrl or "http://localhost:11434",
                 chat_model=request.chatModel or "qwen2.5-coder:3b",
                 context_str=context_str
             )

@@ -58,7 +58,6 @@
                 <div class="stream-header">
                     <span class="stream-role" id="stream-role">NEXUS // RESPONSE CORE</span>
                     <div class="stream-actions">
-                        <button class="copy-btn" onclick="copyStreamResponse()" title="Copy to Clipboard">📋 Copy</button>
                         <button class="close-stream-btn" onclick="closeStreamResponse()" title="Close Box">&times;</button>
                     </div>
                 </div>
@@ -102,6 +101,9 @@
 
             <label class="field-label" style="margin-top: 12px;">Model Name</label>
             <input type="text" id="model-input" class="clean-input" value="qwen2.5-coder:3b">
+
+            <button class="save-config-btn" onclick="saveEngineConfig()">Save Configuration</button>
+            <div id="save-status-msg" class="save-status-msg" style="display: none;"></div>
 
             <div style="margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 16px;">
                 <label class="field-label">OS Process Manager</label>

@@ -26,5 +26,5 @@ echo [3/4] Opening NEXUS Interface in your browser...
 start "" "http://localhost:8001"
 echo.
 echo [4/4] Booting FastAPI backend server on port 8001...
-python -m uvicorn app.main:app --host 127.0.0.1 --port 8001
+python -m uvicorn app.main:app --host 127.0.0.1 --port 8001 --reload
 pause
