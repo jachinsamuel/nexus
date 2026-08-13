@@ -36,18 +36,16 @@ function setupEventListeners() {
 
     // Keyboard Shortcuts
     document.addEventListener("keydown", (e) => {
-        const isInputActive = document.activeElement.tagName === "INPUT" || document.activeElement.tagName === "TEXTAREA";
+        const isInputActive = document.activeElement && (
+            document.activeElement.tagName === "INPUT" || 
+            document.activeElement.tagName === "TEXTAREA" || 
+            document.activeElement.tagName === "SELECT"
+        );
         
-        // Spacebar to toggle Voice Mode
-        if (e.code === "Space" && !isInputActive) {
+        // Spacebar to toggle Voice Mode (when not typing in an input field)
+        if ((e.code === "Space" || e.key === " " || e.keyCode === 32) && !isInputActive) {
             e.preventDefault();
             toggleVoiceMode();
-        }
-        
-        // '?' Key to toggle Shortcuts Modal
-        if (e.key === "?" && !isInputActive) {
-            e.preventDefault();
-            toggleShortcutsModal();
         }
     });
 
@@ -180,6 +178,12 @@ function closeStreamResponse() {
     const streamText = document.getElementById("stream-text");
     streamText.innerText = "";
     streamBox.style.display = "none";
+    if (synth) synth.cancel();
+    isSpeaking = false;
+    isProcessing = false;
+    if (isVoiceActive && recognition) {
+        try { recognition.start(); } catch (e) {}
+    }
 }
 
 // Voice Recognition setup
@@ -208,6 +212,15 @@ function initSpeechRecognition() {
         }
     };
 
+    recognition.onerror = (e) => {
+        if (e.error !== "no-speech") {
+            isProcessing = false;
+        }
+        if (isVoiceActive && !isProcessing && !isSpeaking) {
+            try { recognition.start(); } catch (err) {}
+        }
+    };
+
     recognition.onend = () => {
         if (isVoiceActive && !isProcessing && !isSpeaking) {
             try { recognition.start(); } catch (e) {}
@@ -215,17 +228,47 @@ function initSpeechRecognition() {
     };
 }
 
+function playJarvisChime(type = "activate") {
+    try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return;
+        const ctx = new AudioCtx();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+
+        osc.type = "sine";
+        gain.gain.setValueAtTime(0.04, ctx.currentTime);
+
+        if (type === "activate") {
+            osc.frequency.setValueAtTime(587.33, ctx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(1174.66, ctx.currentTime + 0.12);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
+        } else {
+            osc.frequency.setValueAtTime(880, ctx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + 0.12);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
+        }
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.16);
+    } catch (e) {}
+}
+
 function toggleVoiceMode() {
     isVoiceActive = !isVoiceActive;
     const micBtn = document.getElementById("mic-trigger");
 
     if (isVoiceActive) {
+        playJarvisChime("activate");
         micBtn.classList.add("active");
         if (!isProcessing && !isSpeaking) {
             updateReactorState("LISTENING", "Listening for command or query...");
             try { recognition.start(); } catch (e) {}
         }
     } else {
+        playJarvisChime("deactivate");
         micBtn.classList.remove("active");
         updateReactorState("STANDBY", "Click Arc Reactor or press Space for voice mode");
         if (recognition) recognition.stop();
