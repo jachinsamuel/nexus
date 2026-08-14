@@ -40,6 +40,17 @@ def get_system_telemetry() -> Dict[str, Any]:
     disk = psutil.disk_usage('/')
     boot_time = datetime.fromtimestamp(psutil.boot_time()).strftime("%Y-%m-%d %H:%M:%S")
     
+    battery_info = None
+    try:
+        bat = psutil.sensors_battery()
+        if bat:
+            battery_info = {
+                "percent": round(bat.percent, 1),
+                "power_plugged": bat.power_plugged
+            }
+    except Exception:
+        pass
+
     return {
         "os": f"{platform.system()} {platform.release()}",
         "architecture": platform.machine(),
@@ -50,6 +61,7 @@ def get_system_telemetry() -> Dict[str, Any]:
         "ram_percent": memory.percent,
         "disk_total_gb": round(disk.total / (1024 ** 3), 2),
         "disk_percent": disk.percent,
+        "battery": battery_info,
         "boot_time": boot_time
     }
 
@@ -207,6 +219,40 @@ def control_system_volume(action: str) -> Dict[str, Any]:
     except Exception as e:
         return {"status": "error", "message": f"Audio control error: {str(e)}"}
     return {"status": "success", "message": f"NEXUS Audio command processed."}
+
+async def search_wikipedia(topic: str) -> Dict[str, Any]:
+    """Queries Wikipedia REST API for instant encyclopedic summary."""
+    try:
+        clean_topic = topic.lower().replace("wikipedia", "").replace("who is", "").replace("what is", "").replace("tell me about", "").replace("search wikipedia for", "").strip()
+        if not clean_topic:
+            clean_topic = "Artificial Intelligence"
+            
+        url = f"https://en.wikipedia.org/api/rest_v1/page/summary/{httpx.URL(clean_topic).path}"
+        async with httpx.AsyncClient() as client:
+            res = await client.get(url, headers={"User-Agent": "NEXUS-Assistant/2.0"}, timeout=6.0)
+            if res.status_code == 200:
+                data = res.json()
+                title = data.get("title", clean_topic)
+                extract = data.get("extract", "No summary available.")
+                msg = f"NEXUS Encyclopedia ({title}):\n{extract}"
+                return {"status": "success", "message": msg, "title": title, "extract": extract}
+    except Exception:
+        pass
+    return {"status": "error", "message": f"Wikipedia query failed for '{topic}'."}
+
+def evaluate_math_expression(expr_str: str) -> Dict[str, Any]:
+    """Safely evaluates basic mathematical expressions."""
+    try:
+        clean_expr = expr_str.lower().replace("calculate", "").replace("what is", "").replace("evaluate", "").replace("percent of", "* 0.01 *").replace("times", "*").replace("divided by", "/").replace("plus", "+").replace("minus", "-").strip()
+        clean_expr = re.sub(r'[^0-9\+\-\*\/\.\(\)\s]', '', clean_expr).strip()
+        
+        if clean_expr:
+            result = eval(clean_expr, {"__builtins__": None, "math": __import__("math")})
+            msg = f"NEXUS Compute Engine:\n• Expression: {clean_expr}\n• Result: {result}"
+            return {"status": "success", "message": msg, "result": result}
+    except Exception:
+        pass
+    return {"status": "error", "message": f"Could not compute expression '{expr_str}'."}
 
 async def execute_git_command(git_cmd: str, extra_args: str = "") -> Dict[str, Any]:
     """Executes safe git commands (status, log, diff, branch, add, commit, push)."""
@@ -369,6 +415,28 @@ async def parse_and_execute_voice_intent(command_raw: str) -> Dict[str, Any]:
                     }
                 except Exception as e:
                     return {"status": "error", "message": f"Failed to open project {matched_proj_name}: {str(e)}"}
+
+    # 1.4 Wikipedia Encyclopedia Lookup
+    if "wikipedia" in clean_cmd or "who is" in clean_cmd or "tell me about" in clean_cmd:
+        res = await search_wikipedia(clean_cmd)
+        if res.get("status") == "success":
+            return {
+                "status": "action_executed",
+                "intent": "wikipedia_lookup",
+                "message": res["message"],
+                "data": res
+            }
+
+    # 1.45 Math Expression Calculator
+    if "calculate" in clean_cmd or "math" in clean_cmd or "evaluate" in clean_cmd or "times" in words_set or "divided by" in clean_cmd:
+        res = evaluate_math_expression(clean_cmd)
+        if res.get("status") == "success":
+            return {
+                "status": "action_executed",
+                "intent": "math_calculator",
+                "message": res["message"],
+                "data": res
+            }
 
     # 1.5 JARVIS Protocols (House Party, Clean Slate, Lockdown)
     if "protocol" in clean_cmd or "house party" in clean_cmd or "clean slate" in clean_cmd or "lockdown" in clean_cmd or "lock pc" in clean_cmd:

@@ -122,8 +122,12 @@ async function fetchTelemetry() {
     try {
         const res = await fetch("/api/system/stats");
         const stats = await res.json();
+        let ramText = `RAM ${stats.ram_used_gb}/${stats.ram_total_gb}GB`;
+        if (stats.battery && stats.battery.percent !== undefined) {
+            ramText += ` • BAT ${stats.battery.percent}%${stats.battery.power_plugged ? '⚡' : ''}`;
+        }
         document.getElementById("hdr-cpu").innerText = `CPU ${stats.cpu_percent}%`;
-        document.getElementById("hdr-ram").innerText = `RAM ${stats.ram_used_gb}/${stats.ram_total_gb}GB`;
+        document.getElementById("hdr-ram").innerText = ramText;
     } catch (err) {}
 }
 
