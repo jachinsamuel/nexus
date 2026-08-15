@@ -332,6 +332,47 @@ def convert_units_and_currency(cmd_text: str) -> Dict[str, Any]:
             
     return {"status": "error", "message": "Conversion format not recognized."}
 
+async def check_network_connectivity() -> Dict[str, Any]:
+    """Pings Google DNS to measure network ping latency and internet status."""
+    try:
+        start_t = datetime.now()
+        async with httpx.AsyncClient() as client:
+            res = await client.get("https://www.google.com", timeout=3.0)
+            latency_ms = round((datetime.now() - start_t).total_seconds() * 1000, 1)
+            if res.status_code == 200:
+                msg = f"NEXUS Telemetry: Internet Link Active.\n• Latency: {latency_ms} ms\n• Status: Online & Connected"
+                return {"status": "success", "message": msg, "latency": latency_ms}
+    except Exception:
+        pass
+    return {"status": "error", "message": "NEXUS Telemetry: Internet Connection Offline or unreachable."}
+
+def read_system_clipboard() -> Dict[str, Any]:
+    """Reads current text on system clipboard."""
+    text = get_clipboard_content()
+    if text:
+        msg = f"NEXUS Clipboard Reader:\n\"{text[:250]}\""
+        if len(text) > 250:
+            msg += "..."
+        return {"status": "success", "message": msg, "clipboard": text}
+    return {"status": "error", "message": "NEXUS Clipboard Reader: Clipboard is currently empty, Sir."}
+
+def search_google_or_youtube(query: str) -> Dict[str, Any]:
+    """Launches web browser for direct Google or YouTube search queries."""
+    import urllib.parse
+    clean = query.lower()
+    if "youtube" in clean:
+        search_term = clean.replace("search youtube for", "").replace("youtube", "").replace("search youtube", "").strip()
+        encoded = urllib.parse.quote(search_term)
+        url = f"https://www.youtube.com/results?search_query={encoded}"
+        subprocess.Popen(f'start "" "{url}"', shell=True)
+        return {"status": "success", "message": f"NEXUS opened YouTube search for '{search_term}', Sir."}
+    else:
+        search_term = clean.replace("search google for", "").replace("search google", "").replace("search for", "").replace("google", "").strip()
+        encoded = urllib.parse.quote(search_term)
+        url = f"https://www.google.com/search?q={encoded}"
+        subprocess.Popen(f'start "" "{url}"', shell=True)
+        return {"status": "success", "message": f"NEXUS launched Google search for '{search_term}', Sir."}
+
 async def execute_git_command(git_cmd: str, extra_args: str = "") -> Dict[str, Any]:
     """Executes safe git commands (status, log, diff, branch, add, commit, push)."""
     import subprocess
@@ -392,10 +433,12 @@ async def parse_and_execute_voice_intent(command_raw: str) -> Dict[str, Any]:
             "2. Project & Command Execution: Say 'open <project>' or 'open <project> and execute <cmd>' (e.g., 'open ace and execute ace ship').\n"
             "3. Universal App Launcher: Launch desktop applications ('open chrome', 'open vscode', 'open spotify', 'open calculator').\n"
             "4. JARVIS Protocols: Execute 'Protocol House Party' (system audit), 'Clean Slate' (buffer wipe), or 'Protocol Lockdown' (locks workstation).\n"
-            "5. Telemetry & Hardware Stats: Real-time CPU %, RAM GB, Drive Storage, and Battery tracking.\n"
+            "5. Hardware & Network Telemetry: Real-time CPU %, RAM GB, Drive Storage, Battery tracking, and Network Ping latency.\n"
             "6. Desktop Screen Capture: Say 'take screenshot' to capture and save your screen.\n"
             "7. Intelligence & Utilities: Wikipedia lookup, Math calculator, Unit converter, Live Weather, and News Briefings.\n"
-            "8. Git & Clipboard Automation: Inspect git status/commits and read system clipboard text."
+            "8. Clipboard Reader: Say 'read clipboard' to inspect and speak copied text out loud.\n"
+            "9. Web Search & Navigation: Say 'search google for <query>' or 'search youtube for <video>'.\n"
+            "10. Git & System Automation: Inspect git status, commits, and automate workflow tasks."
         )
         return {
             "status": "action_executed",
@@ -562,16 +605,35 @@ async def parse_and_execute_voice_intent(command_raw: str) -> Dict[str, Any]:
             "data": res
         }
 
-    # 1.48 Unit & Temperature Converter
-    if "convert" in clean_cmd and ("to" in words_set or "celsius" in clean_cmd or "fahrenheit" in clean_cmd or "miles" in clean_cmd or "km" in clean_cmd):
-        res = convert_units_and_currency(clean_cmd)
-        if res.get("status") == "success":
-            return {
-                "status": "action_executed",
-                "intent": "unit_converter",
-                "message": res["message"],
-                "data": res
-            }
+    # 1.49 Network Ping Telemetry & Speed Check
+    if "ping" in words_set or "internet status" in clean_cmd or "connection status" in clean_cmd or "latency" in clean_cmd:
+        res = await check_network_connectivity()
+        return {
+            "status": "action_executed",
+            "intent": "network_telemetry",
+            "message": res["message"],
+            "data": res
+        }
+
+    # 1.50 Clipboard Reader
+    if "clipboard" in clean_cmd or "read clipboard" in clean_cmd or "what did i copy" in clean_cmd:
+        res = read_system_clipboard()
+        return {
+            "status": "action_executed",
+            "intent": "clipboard_reader",
+            "message": res["message"],
+            "data": res
+        }
+
+    # 1.51 Direct Google & YouTube Search Navigation
+    if ("search google" in clean_cmd or "search youtube" in clean_cmd or "google for" in clean_cmd or "youtube for" in clean_cmd) and not "wikipedia" in clean_cmd:
+        res = search_google_or_youtube(clean_cmd)
+        return {
+            "status": "action_executed",
+            "intent": "web_search_launch",
+            "message": res["message"],
+            "data": res
+        }
 
     # 1.5 JARVIS Protocols (House Party, Clean Slate, Lockdown)
     if "protocol" in clean_cmd or "house party" in clean_cmd or "clean slate" in clean_cmd or "lockdown" in clean_cmd or "lock pc" in clean_cmd:
