@@ -25,14 +25,23 @@ function initApp() {
 }
 
 function setupEventListeners() {
-    // Form Submit
-    document.getElementById("cmd-form").addEventListener("submit", handleCommandSubmit);
+    // Form Submit (if present)
+    const cmdForm = document.getElementById("cmd-form");
+    if (cmdForm) {
+        cmdForm.addEventListener("submit", handleCommandSubmit);
+    }
 
-    // Mic Button Trigger
-    document.getElementById("mic-trigger").addEventListener("click", toggleVoiceMode);
+    // Mic Button Trigger (if present)
+    const micBtn = document.getElementById("mic-trigger");
+    if (micBtn) {
+        micBtn.addEventListener("click", toggleVoiceMode);
+    }
 
     // Click Arc Reactor to Toggle Voice
-    document.querySelector(".arc-container").addEventListener("click", toggleVoiceMode);
+    const arcContainer = document.querySelector(".arc-container");
+    if (arcContainer) {
+        arcContainer.addEventListener("click", toggleVoiceMode);
+    }
 
     // Keyboard Shortcuts
     document.addEventListener("keydown", (e) => {
@@ -124,7 +133,7 @@ async function fetchTelemetry() {
         const stats = await res.json();
         let ramText = `RAM ${stats.ram_used_gb}/${stats.ram_total_gb}GB`;
         if (stats.battery && stats.battery.percent !== undefined) {
-            ramText += ` • BAT ${stats.battery.percent}%${stats.battery.power_plugged ? '⚡' : ''}`;
+            ramText += ` • BAT ${stats.battery.percent}%`;
         }
         document.getElementById("hdr-cpu").innerText = `CPU ${stats.cpu_percent}%`;
         document.getElementById("hdr-ram").innerText = ramText;
@@ -266,14 +275,14 @@ function toggleVoiceMode() {
 
     if (isVoiceActive) {
         playJarvisChime("activate");
-        micBtn.classList.add("active");
+        if (micBtn) micBtn.classList.add("active");
         if (!isProcessing && !isSpeaking) {
             updateReactorState("LISTENING", "Listening for command or query...");
             try { recognition.start(); } catch (e) {}
         }
     } else {
         playJarvisChime("deactivate");
-        micBtn.classList.remove("active");
+        if (micBtn) micBtn.classList.remove("active");
         updateReactorState("STANDBY", "Click Arc Reactor or press Space for voice mode");
         if (recognition) recognition.stop();
         if (synth) synth.cancel();
@@ -445,6 +454,20 @@ function displayStreamResponse(role, text) {
     streamText.innerText = text;
 }
 
+function getMaleVoice() {
+    if (!synth) return null;
+    const voices = synth.getVoices();
+    if (!voices || voices.length === 0) return null;
+
+    const maleNames = ["david", "george", "mark", "male", "guy", "alex", "daniel", "james"];
+    for (const name of maleNames) {
+        const found = voices.find(v => v.name.toLowerCase().includes(name));
+        if (found) return found;
+    }
+
+    return voices.find(v => v.lang.startsWith("en")) || voices[0];
+}
+
 function speakText(text) {
     if (!synth) {
         isProcessing = false;
@@ -454,6 +477,12 @@ function speakText(text) {
 
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.rate = 1.0;
+    utterance.pitch = 0.9;
+
+    const maleVoice = getMaleVoice();
+    if (maleVoice) {
+        utterance.voice = maleVoice;
+    }
 
     utterance.onstart = () => {
         isSpeaking = true;
@@ -504,10 +533,9 @@ function initArcCanvas() {
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
 
-    // DPI Scaling for razor-sharp rendering
     const dpi = window.devicePixelRatio || 2;
-    canvas.width = 235 * dpi;
-    canvas.height = 235 * dpi;
+    canvas.width = 340 * dpi;
+    canvas.height = 340 * dpi;
 
     let angle = 0;
 
@@ -516,8 +544,8 @@ function initArcCanvas() {
         ctx.save();
         ctx.scale(dpi, dpi);
 
-        const cx = 117.5;
-        const cy = 117.5;
+        const cx = 170;
+        const cy = 170;
 
         // 1. Rotating Outer Ticks Ring
         ctx.save();
@@ -528,7 +556,7 @@ function initArcCanvas() {
             const rot = (i / 48) * Math.PI * 2;
             const isMajor = i % 12 === 0;
             const len = isMajor ? 8 : 4;
-            const r1 = 112;
+            const r1 = 162;
             const r2 = r1 - len;
 
             ctx.strokeStyle = isMajor ? "#00f0ff" : "rgba(0, 240, 255, 0.25)";
@@ -545,7 +573,7 @@ function initArcCanvas() {
             ctx.save();
             ctx.translate(cx, cy);
             const numBars = 64;
-            const radius = 94;
+            const radius = 135;
 
             for (let i = 0; i < numBars; i++) {
                 const barAngle = (i / numBars) * Math.PI * 2 + angle;

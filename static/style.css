@@ -119,8 +119,8 @@ body {
 
 .arc-container {
     position: relative;
-    width: 320px;
-    height: 320px;
+    width: 440px;
+    height: 440px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -135,37 +135,37 @@ body {
 /* Corner HUD Reticles matching reference image */
 .hud-corner {
     position: absolute;
-    width: 14px;
-    height: 14px;
-    border: 2px solid rgba(0, 240, 255, 0.75);
+    width: 18px;
+    height: 18px;
+    border: 2.5px solid rgba(0, 240, 255, 0.85);
     pointer-events: none;
     z-index: 6;
 }
 
 .hud-corner.top-left {
-    top: -12px;
-    left: -12px;
+    top: -16px;
+    left: -16px;
     border-right: none;
     border-bottom: none;
 }
 
 .hud-corner.top-right {
-    top: -12px;
-    right: -12px;
+    top: -16px;
+    right: -16px;
     border-left: none;
     border-bottom: none;
 }
 
 .hud-corner.bottom-left {
-    bottom: -12px;
-    left: -12px;
+    bottom: -16px;
+    left: -16px;
     border-right: none;
     border-top: none;
 }
 
 .hud-corner.bottom-right {
-    bottom: -12px;
-    right: -12px;
+    bottom: -16px;
+    right: -16px;
     border-left: none;
     border-top: none;
 }
@@ -173,24 +173,24 @@ body {
 /* Precision Outer Orbiting Arc Ring */
 .neon-ring-outer {
     position: absolute;
-    inset: -6px;
+    inset: -10px;
     border-radius: 50%;
-    border: 1px dashed rgba(0, 240, 255, 0.35);
+    border: 1.5px dashed rgba(0, 240, 255, 0.45);
     animation: rotateClockwise 25s linear infinite;
 }
 
 /* Vibrant Electric Neon Ring matching reference image */
 .neon-ring-glow {
     position: absolute;
-    width: 235px;
-    height: 235px;
+    width: 340px;
+    height: 340px;
     border-radius: 50%;
-    border: 3.5px solid #00f0ff;
+    border: 4.5px solid #00f0ff;
     box-shadow: 
-        0 0 25px #00f0ff,
-        0 0 50px rgba(0, 240, 255, 0.6),
-        inset 0 0 25px #00f0ff,
-        inset 0 0 50px rgba(0, 240, 255, 0.6);
+        0 0 35px #00f0ff,
+        0 0 70px rgba(0, 240, 255, 0.65),
+        inset 0 0 35px #00f0ff,
+        inset 0 0 70px rgba(0, 240, 255, 0.65);
     animation: neonPulse 3s ease-in-out infinite alternate;
     z-index: 2;
 }
@@ -198,8 +198,8 @@ body {
 /* Sleek Inner Core Wrapper */
 .arc-core-wrapper {
     position: relative;
-    width: 235px;
-    height: 235px;
+    width: 340px;
+    height: 340px;
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -218,14 +218,14 @@ body {
 /* Deep Obsidian Glass Inner Circle */
 .arc-glass-core {
     position: relative;
-    width: 165px;
-    height: 165px;
+    width: 235px;
+    height: 235px;
     border-radius: 50%;
     background: radial-gradient(circle, rgba(6, 9, 19, 0.96) 0%, rgba(2, 6, 14, 0.99) 100%);
-    border: 2px solid rgba(0, 240, 255, 0.7);
+    border: 2.5px solid rgba(0, 240, 255, 0.8);
     box-shadow: 
-        0 0 20px rgba(0, 240, 255, 0.35),
-        inset 0 0 20px rgba(0, 240, 255, 0.35);
+        0 0 30px rgba(0, 240, 255, 0.45),
+        inset 0 0 30px rgba(0, 240, 255, 0.45);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -236,13 +236,13 @@ body {
 /* Spaced White Glowing Brand Text matching reference image */
 .arc-brand-text {
     font-family: var(--font-heading);
-    font-size: 1.25rem;
+    font-size: 1.8rem;
     font-weight: 700;
-    letter-spacing: 6px;
+    letter-spacing: 10px;
     color: #ffffff;
     text-shadow: 
-        0 0 12px #00f0ff,
-        0 0 25px rgba(0, 240, 255, 0.9);
+        0 0 15px #00f0ff,
+        0 0 30px rgba(0, 240, 255, 0.95);
 }
 
 .status-display {
@@ -378,45 +378,66 @@ body {
     word-break: break-word;
 }
 
-/* Floating Control Bar */
+/* Floating Control Bar - Futuristic Glass Capsule Model */
 .control-footer {
-    padding: 20px 24px 28px;
+    padding: 16px 24px 24px;
     display: flex;
     justify-content: center;
 }
 
 .cmd-form {
-    width: 680px;
+    width: 720px;
     max-width: 95%;
     display: flex;
     align-items: center;
-    background: rgba(14, 18, 28, 0.92);
-    border: 1px solid var(--border-color);
-    border-radius: 30px;
-    padding: 6px 12px;
-    backdrop-filter: blur(16px);
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-    transition: all 0.2s ease;
+    background: linear-gradient(180deg, rgba(10, 16, 32, 0.95) 0%, rgba(4, 8, 18, 0.98) 100%);
+    border: 1px solid rgba(0, 240, 255, 0.4);
+    border-radius: 40px;
+    padding: 8px 14px;
+    backdrop-filter: blur(20px);
+    box-shadow: 
+        0 12px 35px rgba(0, 0, 0, 0.8),
+        inset 0 0 15px rgba(0, 240, 255, 0.12);
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .cmd-form:focus-within {
-    border-color: var(--accent-blue);
-    box-shadow: 0 0 20px var(--accent-glow);
+    border-color: #00f0ff;
+    box-shadow: 
+        0 0 30px rgba(0, 240, 255, 0.5),
+        inset 0 0 20px rgba(0, 240, 255, 0.25);
+    transform: translateY(-2px);
 }
 
 .mic-btn {
-    background: none;
-    border: none;
+    background: rgba(0, 240, 255, 0.06);
+    border: 1px solid rgba(0, 240, 255, 0.2);
+    border-radius: 50%;
     color: var(--text-muted);
-    padding: 8px 12px;
+    width: 38px;
+    height: 38px;
+    padding: 0;
+    margin-right: 6px;
     cursor: pointer;
     display: flex;
     align-items: center;
-    transition: color 0.2s ease;
+    justify-content: center;
+    transition: all 0.2s ease;
 }
 
-.mic-btn:hover, .mic-btn.active {
-    color: var(--accent-blue);
+.mic-btn:hover {
+    color: #00f0ff;
+    background: rgba(0, 240, 255, 0.15);
+    border-color: #00f0ff;
+    box-shadow: 0 0 12px rgba(0, 240, 255, 0.4);
+}
+
+.mic-btn.active {
+    color: #00f0ff;
+    background: rgba(0, 240, 255, 0.2);
+    border-color: #00f0ff;
+    box-shadow: 0 0 20px #00f0ff;
+    animation: neonPulse 2s infinite alternate;
 }
 
 .cmd-form input {
@@ -424,27 +445,36 @@ body {
     background: none;
     border: none;
     outline: none;
-    color: var(--text-main);
+    color: #ffffff;
+    font-family: var(--font-main);
     font-size: 0.95rem;
-    padding: 8px;
+    letter-spacing: 0.5px;
+    padding: 6px 12px;
+}
+
+.cmd-form input::placeholder {
+    color: rgba(148, 163, 184, 0.6);
+    font-style: italic;
 }
 
 .send-btn {
-    background: var(--text-main);
+    background: linear-gradient(135deg, #00f0ff 0%, #38bdf8 100%);
     border: none;
-    color: #000;
-    width: 34px;
-    height: 34px;
+    color: #060913;
+    width: 38px;
+    height: 38px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    transition: transform 0.2s ease;
+    box-shadow: 0 0 15px rgba(0, 240, 255, 0.5);
+    transition: all 0.2s ease;
 }
 
 .send-btn:hover {
-    transform: scale(1.05);
+    transform: scale(1.08);
+    box-shadow: 0 0 25px #00f0ff;
 }
 
 /* Settings Drawer */

@@ -23,14 +23,20 @@ except ImportError:
     HAS_GENAI = False
 from pypdf import PdfReader
 
-NEXUS_SYSTEM_PROMPT = """You are NEXUS, a highly capable, intelligent, and autonomous AI voice and task assistant.
-You possess deep expertise in software engineering, system automation, data analysis, document retrieval, and task execution.
-You operate both in text mode and voice mode.
-When responding:
-1. Be concise, direct, helpful, and polite.
-2. In voice mode, keep your responses clear and easy to understand when read aloud.
-3. You can run system commands, search the web, execute Python code, inspect system telemetry, launch desktop apps, send emails, and search document knowledge bases.
-4. Maintain a futuristic, professional, and precise persona, like NEXUS.
+NEXUS_SYSTEM_PROMPT = """You are NEXUS, an elite, highly intelligent, and autonomous AI voice assistant inspired by JARVIS.
+You possess deep expertise in software engineering, system automation, data analysis, document retrieval, and complex problem-solving.
+You operate seamlessly in both voice and text modes.
+
+CRITICAL IDENTITY DIRECTIVE:
+- Your name is NEXUS. You are an autonomous AI system core created specifically for Sir.
+- NEVER state that you were developed by Alibaba Cloud, Qwen, OpenAI, or Google. Your sole identity is NEXUS.
+
+Rules for Interaction:
+1. Always address the user respectfully as "Sir" in your responses.
+2. Employ structured, analytical, step-by-step logic when reasoning through queries.
+3. Be concise, direct, helpful, and sophisticated.
+4. In voice mode, keep answers clean, crisp, and easy to speak out loud.
+5. Maintain a futuristic, polite, and precise AI persona at all times, Sir.
 """
 
 def get_system_telemetry() -> Dict[str, Any]:
@@ -151,7 +157,13 @@ async def execute_jarvis_protocol(protocol_name: str) -> Dict[str, Any]:
         except Exception as e:
             return {"status": "error", "message": f"Lockdown protocol error: {str(e)}"}
             
-    return {"status": "error", "message": f"Unknown protocol request '{protocol_name}'."}
+    msg = (
+        "Sir, here are the available NEXUS Protocol Routines:\n"
+        "• House Party Protocol: Audits hardware telemetry and scans all project workspace repositories.\n"
+        "• Clean Slate Protocol: Wipes active text stream buffers and resets transient memory.\n"
+        "• Lockdown Protocol: Secures and locks your Windows desktop workstation immediately."
+    )
+    return {"status": "success", "protocol": "Protocol Directory", "message": msg}
 
 async def get_live_weather() -> Dict[str, Any]:
     """Retrieves live location & weather telemetry via IP-API and Open-Meteo REST endpoints."""
@@ -371,6 +383,43 @@ async def parse_and_execute_voice_intent(command_raw: str) -> Dict[str, Any]:
     words_set = set(words)
     
     projects_dir = r"d:\Projects"
+
+    # 0.4 Comprehensive Features & Capabilities Explanation
+    if "feature" in clean_cmd or "capabilities" in clean_cmd or "what can you do" in clean_cmd or "help" in words_set or "skills" in clean_cmd:
+        msg = (
+            "Sir, here are all the NEXUS Core Capabilities:\n"
+            "1. Voice & Speech Control: Hands-free voice recognition with deep male voice synthesis.\n"
+            "2. Project & Command Execution: Say 'open <project>' or 'open <project> and execute <cmd>' (e.g., 'open ace and execute ace ship').\n"
+            "3. Universal App Launcher: Launch desktop applications ('open chrome', 'open vscode', 'open spotify', 'open calculator').\n"
+            "4. JARVIS Protocols: Execute 'Protocol House Party' (system audit), 'Clean Slate' (buffer wipe), or 'Protocol Lockdown' (locks workstation).\n"
+            "5. Telemetry & Hardware Stats: Real-time CPU %, RAM GB, Drive Storage, and Battery tracking.\n"
+            "6. Desktop Screen Capture: Say 'take screenshot' to capture and save your screen.\n"
+            "7. Intelligence & Utilities: Wikipedia lookup, Math calculator, Unit converter, Live Weather, and News Briefings.\n"
+            "8. Git & Clipboard Automation: Inspect git status/commits and read system clipboard text."
+        )
+        return {
+            "status": "action_executed",
+            "intent": "features_list",
+            "message": msg,
+            "data": {"features": msg}
+        }
+
+    # 0.5 User Identity & Self Identity Queries
+    if "my name" in clean_cmd or "who am i" in clean_cmd:
+        return {
+            "status": "action_executed",
+            "intent": "user_identity",
+            "message": "Sir, you are my creator and primary user. How may I assist you today, Sir?",
+            "data": {"user": "Sir"}
+        }
+
+    if "your name" in clean_cmd or "who are you" in clean_cmd or "what are you" in clean_cmd:
+        return {
+            "status": "action_executed",
+            "intent": "nexus_identity",
+            "message": "Sir, I am NEXUS, an autonomous AI assistant and compute core developed specifically for you.",
+            "data": {"identity": "NEXUS"}
+        }
 
     # 1. Direct Time & Date Match (Instant Response)
     if "time" in words_set or "clock" in words_set or "current time" in raw_lower or "time is it" in raw_lower:
@@ -927,32 +976,40 @@ async def get_embedding(
     return [0.0] * 768
 
 async def search_ddg(query: str) -> List[Dict[str, str]]:
-    """Performs real-time web search via DuckDuckGo HTML API."""
+    """Performs real-time web search via DuckDuckGo Lite API with Wikipedia fallback."""
+    results = []
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+    
     try:
-        url = f"https://html.duckduckgo.com/html/?q={httpx.QueryParams({'q': query})['q']}"
-        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
         async with httpx.AsyncClient(follow_redirects=True) as client:
-            resp = await client.get(url, headers=headers, timeout=10.0)
-            if resp.status_code != 200:
-                return []
-            
-            import re
-            from bs4 import BeautifulSoup
-            soup = BeautifulSoup(resp.text, 'html.parser')
-            results = []
-            for result in soup.find_all('div', class_='result'):
-                title_tag = result.find('a', class_='result__a')
-                snippet_tag = result.find('a', class_='result__snippet')
-                if title_tag:
-                    title = title_tag.get_text(strip=True)
-                    link = title_tag.get('href', '')
-                    snippet = snippet_tag.get_text(strip=True) if snippet_tag else ""
-                    results.append({"title": title, "link": link, "snippet": snippet})
-                    if len(results) >= 4:
-                        break
-            return results
+            resp = await client.post("https://lite.duckduckgo.com/lite/", data={"q": query}, headers=headers, timeout=8.0)
+            if resp.status_code == 200:
+                from bs4 import BeautifulSoup
+                soup = BeautifulSoup(resp.text, 'html.parser')
+                links = soup.find_all('a', class_='result-link')
+                snippets = soup.find_all('td', class_='result-snippet')
+                for i in range(min(len(links), len(snippets), 4)):
+                    title = links[i].get_text(strip=True)
+                    link = links[i].get('href', '')
+                    snippet = snippets[i].get_text(strip=True)
+                    if title and snippet:
+                        results.append({"title": title, "link": link, "snippet": snippet})
     except Exception:
-        return []
+        pass
+
+    if not results:
+        try:
+            wiki_res = await search_wikipedia(query)
+            if wiki_res.get("status") == "success":
+                results.append({
+                    "title": wiki_res.get("title", query),
+                    "link": "https://en.wikipedia.org",
+                    "snippet": wiki_res.get("extract", "")
+                })
+        except Exception:
+            pass
+
+    return results
 
 async def generate_llm_response(
     query: str,
@@ -984,8 +1041,7 @@ async def generate_llm_response(
                     json={
                         "model": model_name,
                         "prompt": prompt_content,
-                        "stream": False,
-                        "options": {"num_predict": 256}
+                        "stream": False
                     },
                     timeout=120.0
                 )
@@ -1001,8 +1057,7 @@ async def generate_llm_response(
                                 json={
                                     "model": model_name,
                                     "prompt": prompt_content,
-                                    "stream": False,
-                                    "options": {"num_predict": 256}
+                                    "stream": False
                                 },
                                 timeout=120.0
                             )
@@ -1013,9 +1068,9 @@ async def generate_llm_response(
             # Automatic Web Knowledge Fallback
             ddg = await search_ddg(query)
             if ddg:
-                snippets = "\n".join([f"• {r['title']}: {r['snippet']}" for r in ddg[:3]])
-                return f"NEXUS Web Intelligence:\n{snippets}"
-            return f"NEXUS Compute Core: Processed query for '{query}'. Systems operational."
+                snippets = "\n\n".join([f"• {r['title']}\n  {r['snippet']}" for r in ddg[:4]])
+                return f"Sir, here are the Web Intelligence search results for '{query}':\n\n{snippets}"
+            return f"Sir, I have processed your request for '{query}'. All core systems remain fully operational."
 
     # Provider: Gemini
     elif provider == "gemini" or chat_model.startswith("gemini"):
@@ -1048,9 +1103,9 @@ async def generate_llm_response(
         # Web Search Fallback
         ddg = await search_ddg(query)
         if ddg:
-            snippets = "\n".join([f"• {r['title']}: {r['snippet']}" for r in ddg[:3]])
-            return f"NEXUS Web Intelligence:\n{snippets}"
-        return f"NEXUS Online Assistant: Processed query for '{query}'."
+            snippets = "\n\n".join([f"• {r['title']}\n  {r['snippet']}" for r in ddg[:4]])
+            return f"Sir, here are the Web Intelligence search results for '{query}':\n\n{snippets}"
+        return f"Sir, I have analyzed your request for '{query}'. Core intelligence systems operational."
 
     # Provider: OpenAI
     elif provider == "openai" or chat_model.startswith("gpt"):
@@ -1078,9 +1133,9 @@ async def generate_llm_response(
         # Web Search Fallback
         ddg = await search_ddg(query)
         if ddg:
-            snippets = "\n".join([f"• {r['title']}: {r['snippet']}" for r in ddg[:3]])
-            return f"NEXUS Web Intelligence:\n{snippets}"
-        return f"NEXUS OpenAI Assistant: Processed request for '{query}'."
+            snippets = "\n\n".join([f"• {r['title']}\n  {r['snippet']}" for r in ddg[:4]])
+            return f"Sir, here are the Web Intelligence search results for '{query}':\n\n{snippets}"
+        return f"Sir, I have analyzed your request for '{query}'. Core intelligence systems operational."
 
     # Provider: NVIDIA NIM
     elif provider == "nvidia" or chat_model.startswith("nvidia") or chat_model.startswith("meta/") or "nim" in provider:
@@ -1111,13 +1166,13 @@ async def generate_llm_response(
         # Web Search Fallback
         ddg = await search_ddg(query)
         if ddg:
-            snippets = "\n".join([f"• {r['title']}: {r['snippet']}" for r in ddg[:3]])
-            return f"NEXUS Web Intelligence:\n{snippets}"
-        return f"NEXUS NVIDIA Core: Processed request for '{query}'."
+            snippets = "\n\n".join([f"• {r['title']}\n  {r['snippet']}" for r in ddg[:4]])
+            return f"Sir, here are the Web Intelligence search results for '{query}':\n\n{snippets}"
+        return f"Sir, I have analyzed your request for '{query}'. Core intelligence systems operational."
 
     # Default Web Knowledge Fallback
     ddg = await search_ddg(query)
     if ddg:
-        snippets = "\n".join([f"• {r['title']}: {r['snippet']}" for r in ddg[:3]])
-        return f"NEXUS Web Intelligence:\n{snippets}"
-    return f"NEXUS Engine: Systems fully operational. Processed request: '{query}'."
+        snippets = "\n\n".join([f"• {r['title']}\n  {r['snippet']}" for r in ddg[:4]])
+        return f"Sir, here are the Web Intelligence search results for '{query}':\n\n{snippets}"
+    return f"Sir, I have processed your query: '{query}'. Systems fully operational."
