@@ -373,6 +373,84 @@ def search_google_or_youtube(query: str) -> Dict[str, Any]:
         subprocess.Popen(f'start "" "{url}"', shell=True)
         return {"status": "success", "message": f"NEXUS launched Google search for '{search_term}', Sir."}
 
+NOTES_FILE = os.path.join(os.path.dirname(__file__), "..", "data", "notes.json")
+
+def manage_user_notes(cmd: str) -> Dict[str, Any]:
+    """Saves, reads, or clears persistent user notes."""
+    clean = cmd.lower()
+    os.makedirs(os.path.dirname(NOTES_FILE), exist_ok=True)
+    notes = []
+    if os.path.exists(NOTES_FILE):
+        try:
+            with open(NOTES_FILE, "r", encoding="utf-8") as f:
+                notes = json.load(f)
+        except Exception:
+            notes = []
+
+    if "note down" in clean or "remember" in clean or "remind me" in clean or "take note" in clean:
+        content = re.sub(r'^(note down|remember|remind me to|remind me|take note|add note)\s*', '', clean, flags=re.IGNORECASE).strip()
+        if content:
+            entry = {"text": content, "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M")}
+            notes.append(entry)
+            with open(NOTES_FILE, "w", encoding="utf-8") as f:
+                json.dump(notes, f, indent=2)
+            return {"status": "success", "message": f"Sir, I have recorded your note: '{content}'."}
+
+    elif "clear notes" in clean or "delete notes" in clean or "wipe notes" in clean:
+        with open(NOTES_FILE, "w", encoding="utf-8") as f:
+            json.dump([], f)
+        return {"status": "success", "message": "Sir, all saved notes have been cleared."}
+
+    # Default: read notes
+    if notes:
+        lines = [f"• {n['text']} ({n['timestamp']})" for n in notes[-5:]]
+        msg = f"NEXUS Memory Notes ({len(notes)} saved):\n" + "\n".join(lines)
+        return {"status": "success", "message": msg}
+    return {"status": "success", "message": "Sir, you currently have no saved notes."}
+
+def find_workspace_file(filename_query: str) -> Dict[str, Any]:
+    """Searches d:\\Projects workspace directory for matching files or folders."""
+    projects_dir = r"d:\Projects"
+    clean_target = filename_query.lower().replace("find file", "").replace("search file", "").replace("where is file", "").replace("where is", "").strip()
+    if not clean_target:
+        clean_target = "main"
+
+    matches = []
+    if os.path.exists(projects_dir):
+        for root, dirs, files in os.walk(projects_dir):
+            for name in dirs + files:
+                if clean_target in name.lower():
+                    rel_p = os.path.relpath(os.path.join(root, name), projects_dir)
+                    matches.append(rel_p)
+                    if len(matches) >= 4:
+                        break
+            if len(matches) >= 4:
+                break
+
+    if matches:
+        msg = f"NEXUS File Search for '{clean_target}':\n" + "\n".join([f"• d:\\Projects\\{m}" for m in matches])
+        return {"status": "success", "message": msg}
+    return {"status": "error", "message": f"Sir, no files matching '{clean_target}' were found in workspace."}
+
+def get_top_resource_processes() -> Dict[str, Any]:
+    """Identifies top CPU and RAM consuming processes."""
+    try:
+        procs = []
+        for p in psutil.process_iter(['pid', 'name', 'cpu_percent', 'memory_percent']):
+            try:
+                info = p.info
+                if info['name'] and info['memory_percent'] is not None:
+                    procs.append(info)
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                pass
+        
+        sorted_ram = sorted(procs, key=lambda x: x['memory_percent'] or 0, reverse=True)[:3]
+        lines = [f"• {p['name']}: {round(p['memory_percent'], 1)}% RAM" for p in sorted_ram]
+        msg = "NEXUS Resource Monitor (Top RAM Processes):\n" + "\n".join(lines)
+        return {"status": "success", "message": msg}
+    except Exception as e:
+        return {"status": "error", "message": f"Process monitor error: {str(e)}"}
+
 async def execute_git_command(git_cmd: str, extra_args: str = "") -> Dict[str, Any]:
     """Executes safe git commands (status, log, diff, branch, add, commit, push)."""
     import subprocess
@@ -631,6 +709,36 @@ async def parse_and_execute_voice_intent(command_raw: str) -> Dict[str, Any]:
         return {
             "status": "action_executed",
             "intent": "web_search_launch",
+            "message": res["message"],
+            "data": res
+        }
+
+    # 1.52 Persistent Notes & Voice Memory
+    if "note" in clean_cmd or "remember" in clean_cmd or "remind me" in clean_cmd:
+        res = manage_user_notes(clean_cmd)
+        return {
+            "status": "action_executed",
+            "intent": "user_notes",
+            "message": res["message"],
+            "data": res
+        }
+
+    # 1.53 Workspace File Search
+    if "find file" in clean_cmd or "search file" in clean_cmd or "where is file" in clean_cmd:
+        res = find_workspace_file(clean_cmd)
+        return {
+            "status": "action_executed",
+            "intent": "find_file",
+            "message": res["message"],
+            "data": res
+        }
+
+    # 1.54 Heavy Process Monitor
+    if "top processes" in clean_cmd or "heavy processes" in clean_cmd or "using ram" in clean_cmd:
+        res = get_top_resource_processes()
+        return {
+            "status": "action_executed",
+            "intent": "process_monitor",
             "message": res["message"],
             "data": res
         }
