@@ -304,7 +304,7 @@ async function fetchWorkspaceProjects() {
                 item.className = "project-item";
                 item.onclick = () => executeQuickIntent(`open ${p.name}`);
                 item.innerHTML = `
-                    <span>📁 ${p.name}</span>
+                    <span class="proj-name"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px; vertical-align:-1px;"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>${p.name}</span>
                     ${p.isGit ? '<span class="git-badge">GIT</span>' : ''}
                 `;
                 box.appendChild(item);
@@ -751,7 +751,7 @@ function saveEngineConfig() {
     localStorage.setItem("nexus_model", model);
 
     const msg = document.getElementById("save-status-msg");
-    msg.innerText = "✓ Configuration saved.";
+    msg.innerText = "[OK] CONFIGURATION SAVED";
     msg.style.display = "block";
     logEvent("CFG", `Engine config saved: ${prov.toUpperCase()} // ${model}`);
     setTimeout(() => { msg.style.display = "none"; }, 2500);
@@ -809,7 +809,7 @@ function initArcReactorCanvas() {
             const r1 = 170;
             const r2 = r1 - len;
 
-            ctx.strokeStyle = isMajor ? "#00f0ff" : (isMedium ? "rgba(0, 240, 255, 0.6)" : "rgba(0, 240, 255, 0.2)");
+            ctx.strokeStyle = isMajor ? "#38bdf8" : (isMedium ? "rgba(56, 189, 248, 0.6)" : "rgba(56, 189, 248, 0.25)");
             ctx.lineWidth = isMajor ? 2.5 : 1;
             ctx.beginPath();
             ctx.moveTo(Math.cos(rot) * r1, Math.sin(rot) * r1);
@@ -822,7 +822,7 @@ function initArcReactorCanvas() {
         ctx.save();
         ctx.translate(cx, cy);
         ctx.rotate(-angle * 0.4);
-        ctx.strokeStyle = "rgba(0, 240, 255, 0.4)";
+        ctx.strokeStyle = "rgba(56, 189, 248, 0.45)";
         ctx.lineWidth = 1.5;
         ctx.beginPath();
         ctx.arc(0, 0, 142, 0, Math.PI * 1.6);
@@ -847,7 +847,7 @@ function initArcReactorCanvas() {
                 const x2 = Math.cos(barAngle) * (radius + dynamicHeight);
                 const y2 = Math.sin(barAngle) * (radius + dynamicHeight);
 
-                ctx.strokeStyle = isSpeaking ? "#00ffaa" : "rgba(0, 240, 255, 0.85)";
+                ctx.strokeStyle = isSpeaking ? "#10b981" : "rgba(56, 189, 248, 0.85)";
                 ctx.lineWidth = 2;
                 ctx.beginPath();
                 ctx.moveTo(x1, y1);
