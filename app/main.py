@@ -31,6 +31,11 @@ from app.nexus_engine import (
     execute_git_command,
     parse_and_execute_voice_intent,
     generate_llm_response,
+    check_network_connectivity,
+    take_desktop_screenshot,
+    manage_user_notes,
+    find_workspace_file,
+    get_top_resource_processes,
     NEXUS_SYSTEM_PROMPT
 )
 
@@ -128,6 +133,46 @@ async def list_processes():
 async def kill_process(data: Dict[str, str]):
     target = data.get("name") or data.get("pid") or ""
     return terminate_process_by_name(target)
+
+# Network Ping & Latency Endpoint
+@app.get("/api/system/ping")
+async def get_network_ping():
+    return await check_network_connectivity()
+
+# Desktop Screenshot Endpoint
+@app.post("/api/system/screenshot")
+async def trigger_screenshot():
+    return await take_desktop_screenshot()
+
+# User Notes Endpoints
+@app.get("/api/notes")
+async def get_notes():
+    return manage_user_notes("read notes")
+
+@app.post("/api/notes")
+async def add_note(data: Dict[str, str]):
+    text = data.get("text", "")
+    return manage_user_notes(f"note down {text}")
+
+@app.delete("/api/notes")
+async def delete_notes():
+    return manage_user_notes("clear notes")
+
+# Workspace Projects List Endpoint
+@app.get("/api/workspace/projects")
+async def get_workspace_projects():
+    projects_dir = r"d:\Projects"
+    projs = []
+    if os.path.exists(projects_dir):
+        for item in os.listdir(projects_dir):
+            full_p = os.path.join(projects_dir, item)
+            if os.path.isdir(full_p):
+                projs.append({
+                    "name": item,
+                    "path": full_p,
+                    "isGit": os.path.exists(os.path.join(full_p, ".git"))
+                })
+    return {"projects": projs, "total": len(projs)}
 
 # OS Clipboard Endpoints
 @app.get("/api/clipboard/read")

@@ -1,251 +1,361 @@
+/**
+ * NEXUS // STARK INDUSTRIES TACTICAL HUD CONTROLLER
+ * Architecture: Autonomous Voice Core, Live Telemetry Poller, 
+ * Real-Time Event Log Terminal, Multi-Layer Arc Reactor Canvas Engine.
+ */
+
 let isVoiceActive = false;
 let isSpeaking = false;
 let isProcessing = false;
 let recognition = null;
 let synth = window.speechSynthesis;
+let uptimeSeconds = 0;
+
+// Panel visibility states
+let isLeftPanelOpen = true;
+let isRightPanelOpen = true;
 
 document.addEventListener("DOMContentLoaded", () => {
-    initApp();
+    initStarkHUD();
 });
 
-function initApp() {
-    setupEventListeners();
+function initStarkHUD() {
+    setupKeyboardAndMouseListeners();
     loadSavedEngineConfig();
     initSpeechRecognition();
-    initArcCanvas();
-    fetchTelemetry();
-    setInterval(fetchTelemetry, 10000);
+    initArcReactorCanvas();
+    startUptimeTimer();
 
-    // Auto-activate voice mode by default
+    // Initial Telemetry & Diagnostics
+    fetchTelemetry();
+    fetchNetworkPing();
+    fetchProcessList();
+    fetchWorkspaceProjects();
+    fetchNotesList();
+
+    // Periodic Polling
+    setInterval(fetchTelemetry, 6000);
+    setInterval(fetchNetworkPing, 15000);
+
+    logEvent("SYS", "NEXUS Core Mk-VII Online. All telemetry sensors connected.");
+
+    // Auto-activate voice mode after short boot delay
     setTimeout(() => {
         if (recognition && !isVoiceActive) {
             toggleVoiceMode();
         }
-    }, 500);
+    }, 600);
 }
 
-function setupEventListeners() {
-    // Form Submit (if present)
+/* ==========================================================================
+   1. KEYBOARD & EVENT LISTENERS
+   ========================================================================== */
+function setupKeyboardAndMouseListeners() {
+    // Arc Reactor Click
+    const core = document.getElementById("arc-reactor-core");
+    if (core) {
+        core.addEventListener("click", toggleVoiceMode);
+    }
+
+    // Command Form Submit
     const cmdForm = document.getElementById("cmd-form");
     if (cmdForm) {
         cmdForm.addEventListener("submit", handleCommandSubmit);
     }
 
-    // Mic Button Trigger (if present)
-    const micBtn = document.getElementById("mic-trigger");
-    if (micBtn) {
-        micBtn.addEventListener("click", toggleVoiceMode);
-    }
-
-    // Click Arc Reactor to Toggle Voice
-    const arcContainer = document.querySelector(".arc-container");
-    if (arcContainer) {
-        arcContainer.addEventListener("click", toggleVoiceMode);
-    }
-
-    // Keyboard Shortcuts
+    // Global Tactical Keyboard Shortcuts
     document.addEventListener("keydown", (e) => {
         const isInputActive = document.activeElement && (
             document.activeElement.tagName === "INPUT" || 
             document.activeElement.tagName === "TEXTAREA" || 
             document.activeElement.tagName === "SELECT"
         );
-        
-        // Spacebar to toggle Voice Mode (when not typing in an input field)
+
+        // Spacebar: Toggle Voice Mode (when not typing)
         if ((e.code === "Space" || e.key === " " || e.keyCode === 32) && !isInputActive) {
             e.preventDefault();
             toggleVoiceMode();
         }
-    });
 
-    // Provider select
-    document.getElementById("provider-select").addEventListener("change", (e) => {
-        const prov = e.target.value;
-        const keyGroup = document.getElementById("key-field-group");
-        const modelInput = document.getElementById("model-input");
+        // 'L': Toggle Left Telemetry Panel
+        if ((e.key === "l" || e.key === "L") && !isInputActive) {
+            toggleTelemetryPanel();
+        }
 
-        if (prov === "ollama") {
-            keyGroup.style.display = "none";
-            modelInput.value = "qwen2.5-coder:3b";
-        } else if (prov === "nvidia") {
-            keyGroup.style.display = "block";
-            modelInput.value = "meta/llama-3.1-70b-instruct";
-        } else if (prov === "gemini") {
-            keyGroup.style.display = "block";
-            modelInput.value = "gemini-1.5-flash";
-        } else if (prov === "openai") {
-            keyGroup.style.display = "block";
-            modelInput.value = "gpt-4o-mini";
+        // 'R': Toggle Right Automation Panel
+        if ((e.key === "r" || e.key === "R") && !isInputActive) {
+            toggleAutomationPanel();
+        }
+
+        // 'T' or '/': Toggle Quick Input Capsule
+        if ((e.key === "/" || e.key === "t" || e.key === "T") && !isInputActive) {
+            e.preventDefault();
+            toggleQuickInput();
+        }
+
+        // 'Escape': Close response box or drawer
+        if (e.key === "Escape") {
+            closeStreamResponse();
+            const drawer = document.getElementById("settings-drawer");
+            if (drawer && drawer.style.display !== "none") {
+                drawer.style.display = "none";
+            }
         }
     });
+
+    // Provider select change
+    const provSelect = document.getElementById("provider-select");
+    if (provSelect) {
+        provSelect.addEventListener("change", (e) => {
+            const prov = e.target.value;
+            const keyGroup = document.getElementById("key-field-group");
+            const modelInput = document.getElementById("model-input");
+
+            if (prov === "ollama") {
+                keyGroup.style.display = "none";
+                modelInput.value = "qwen2.5-coder:3b";
+            } else if (prov === "gemini") {
+                keyGroup.style.display = "block";
+                modelInput.value = "gemini-1.5-flash";
+            } else if (prov === "openai") {
+                keyGroup.style.display = "block";
+                modelInput.value = "gpt-4o-mini";
+            } else if (prov === "nvidia") {
+                keyGroup.style.display = "block";
+                modelInput.value = "meta/llama-3.1-70b-instruct";
+            }
+        });
+    }
+}
+
+/* ==========================================================================
+   2. TACTICAL HUD EVENT LOG TERMINAL
+   ========================================================================== */
+function logEvent(type, message) {
+    const stream = document.getElementById("activity-log-stream");
+    if (!stream) return;
+
+    const timeStr = new Date().toTimeString().split(' ')[0];
+    const entry = document.createElement("div");
+    entry.className = `log-entry log-${type.toLowerCase()}`;
+    entry.innerText = `[${timeStr}] ${type}: ${message}`;
+
+    stream.appendChild(entry);
+    stream.scrollTop = stream.scrollHeight;
+}
+
+function clearEventLog() {
+    const stream = document.getElementById("activity-log-stream");
+    if (stream) {
+        stream.innerHTML = '<div class="log-entry log-sys">[00:00:00] LOG TERMINAL BUFFER CLEARED.</div>';
+    }
+}
+
+/* ==========================================================================
+   3. UI PANEL TOGGLES & UPTIME
+   ========================================================================== */
+function toggleTelemetryPanel() {
+    const grid = document.querySelector(".hud-main-grid");
+    const btn = document.getElementById("btn-toggle-telemetry");
+    isLeftPanelOpen = !isLeftPanelOpen;
+
+    if (isLeftPanelOpen) {
+        grid.classList.remove("left-collapsed");
+        btn.classList.add("active");
+    } else {
+        grid.classList.add("left-collapsed");
+        btn.classList.remove("active");
+    }
+}
+
+function toggleAutomationPanel() {
+    const grid = document.querySelector(".hud-main-grid");
+    const btn = document.getElementById("btn-toggle-automation");
+    isRightPanelOpen = !isRightPanelOpen;
+
+    if (isRightPanelOpen) {
+        grid.classList.remove("right-collapsed");
+        btn.classList.add("active");
+    } else {
+        grid.classList.add("right-collapsed");
+        btn.classList.remove("active");
+    }
+}
+
+function toggleQuickInput() {
+    const capsule = document.getElementById("quick-input-capsule");
+    if (capsule) {
+        const isOpen = capsule.style.display !== "none";
+        capsule.style.display = isOpen ? "none" : "block";
+        if (!isOpen) {
+            const input = document.getElementById("cmd-input");
+            if (input) input.focus();
+        }
+    }
 }
 
 function toggleSettingsDrawer() {
     const drawer = document.getElementById("settings-drawer");
-    drawer.style.display = drawer.style.display === "none" ? "block" : "none";
-}
-
-function saveEngineConfig() {
-    const prov = document.getElementById("provider-select").value;
-    const apiKey = document.getElementById("api-key-input").value;
-    const model = document.getElementById("model-input").value;
-
-    localStorage.setItem("nexus_provider", prov);
-    localStorage.setItem("nexus_api_key", apiKey);
-    localStorage.setItem("nexus_model", model);
-
-    const msg = document.getElementById("save-status-msg");
-    msg.innerText = "✓ Configuration saved.";
-    msg.style.display = "block";
-    setTimeout(() => { msg.style.display = "none"; }, 2500);
-}
-
-function loadSavedEngineConfig() {
-    const savedProv = localStorage.getItem("nexus_provider");
-    const savedKey = localStorage.getItem("nexus_api_key");
-    const savedModel = localStorage.getItem("nexus_model");
-
-    if (savedProv) {
-        document.getElementById("provider-select").value = savedProv;
-        const keyGroup = document.getElementById("key-field-group");
-        if (savedProv === "ollama") {
-            keyGroup.style.display = "none";
-        } else {
-            keyGroup.style.display = "block";
-        }
-    }
-    if (savedKey) {
-        document.getElementById("api-key-input").value = savedKey;
-    }
-    if (savedModel) {
-        document.getElementById("model-input").value = savedModel;
+    if (drawer) {
+        drawer.style.display = drawer.style.display === "none" ? "flex" : "none";
     }
 }
 
-function toggleShortcutsModal() {
-    const modal = document.getElementById("shortcuts-modal");
-    modal.style.display = modal.style.display === "none" ? "flex" : "none";
+function startUptimeTimer() {
+    setInterval(() => {
+        uptimeSeconds++;
+        const hrs = String(Math.floor(uptimeSeconds / 3600)).padStart(2, '0');
+        const mins = String(Math.floor((uptimeSeconds % 3600) / 60)).padStart(2, '0');
+        const secs = String(uptimeSeconds % 60).padStart(2, '0');
+        const el = document.getElementById("hud-uptime");
+        if (el) el.innerText = `${hrs}:${mins}:${secs}`;
+    }, 1000);
 }
 
+/* ==========================================================================
+   4. TELEMETRY & SYSTEM METRICS POLLER
+   ========================================================================== */
 async function fetchTelemetry() {
     try {
         const res = await fetch("/api/system/stats");
         const stats = await res.json();
-        let ramText = `RAM ${stats.ram_used_gb}/${stats.ram_total_gb}GB`;
-        if (stats.battery && stats.battery.percent !== undefined) {
-            ramText += ` • BAT ${stats.battery.percent}%`;
-        }
+
+        // Topbar
         document.getElementById("hdr-cpu").innerText = `CPU ${stats.cpu_percent}%`;
-        document.getElementById("hdr-ram").innerText = ramText;
+        document.getElementById("hdr-ram").innerText = `RAM ${stats.ram_used_gb}/${stats.ram_total_gb}GB`;
+        if (stats.battery && stats.battery.percent !== undefined) {
+            document.getElementById("hdr-bat").innerText = `BAT ${stats.battery.percent}%`;
+        }
+
+        // Left Panel Diagnostics
+        document.getElementById("diag-cpu-val").innerText = `${stats.cpu_percent}%`;
+        document.getElementById("diag-cpu-bar").style.width = `${Math.min(stats.cpu_percent, 100)}%`;
+        document.getElementById("diag-cpu-meta").innerText = `Logical Cores: ${stats.cpu_count} // Architecture: ${stats.architecture || 'x64'}`;
+
+        document.getElementById("diag-ram-val").innerText = `${stats.ram_used_gb} / ${stats.ram_total_gb} GB`;
+        document.getElementById("diag-ram-bar").style.width = `${Math.min(stats.ram_percent, 100)}%`;
+        document.getElementById("diag-ram-pct").innerText = `Utilization: ${stats.ram_percent}%`;
+
+        document.getElementById("diag-disk-val").innerText = `${stats.disk_percent}%`;
+        document.getElementById("diag-disk-bar").style.width = `${Math.min(stats.disk_percent, 100)}%`;
+        document.getElementById("diag-disk-meta").innerText = `Total Volume: ${stats.disk_total_gb} GB`;
+
+    } catch (err) {}
+}
+
+async function fetchNetworkPing() {
+    try {
+        const res = await fetch("/api/system/ping");
+        const data = await res.json();
+        const el = document.getElementById("hud-ping");
+        if (el && data.latency !== undefined) {
+            el.innerText = `PING ${data.latency}ms`;
+        }
     } catch (err) {}
 }
 
 async function fetchProcessList() {
     const box = document.getElementById("proc-list-box");
-    box.innerHTML = "Loading processes...";
+    if (!box) return;
     try {
         const res = await fetch("/api/system/processes");
         const procs = await res.json();
         box.innerHTML = "";
-        procs.forEach(p => {
-            const item = document.createElement("div");
-            item.className = "proc-item";
-            item.innerHTML = `
-                <span>${p.name} (RAM ${p.memory_percent}%)</span>
-                <button class="proc-kill-btn" onclick="killProcess('${p.pid}')">Kill</button>
+        procs.slice(0, 6).forEach(p => {
+            const row = document.createElement("div");
+            row.className = "proc-row";
+            row.innerHTML = `
+                <span class="proc-name" title="${p.name}">${p.name}</span>
+                <span class="proc-mem">${p.memory_percent}%</span>
+                <button class="proc-kill-tag" onclick="killTargetProcess('${p.pid}')">KILL</button>
             `;
-            box.appendChild(item);
+            box.appendChild(row);
         });
     } catch (err) {
-        box.innerText = "Error loading processes.";
+        box.innerHTML = '<div class="stream-empty">Process inspection offline.</div>';
     }
 }
 
-async function killProcess(target) {
+async function killTargetProcess(pidOrName) {
     try {
         const res = await fetch("/api/system/process/kill", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ name: target })
+            body: JSON.stringify({ name: pidOrName })
         });
         const data = await res.json();
-        alert(data.message);
+        logEvent("PROC", data.message || `Terminated PID: ${pidOrName}`);
         fetchProcessList();
     } catch (err) {
-        alert("Failed to kill process: " + err.message);
+        logEvent("WARN", `Process kill failed: ${err.message}`);
     }
 }
 
-function copyStreamResponse() {
-    const text = document.getElementById("stream-text").innerText;
-    if (text) {
-        navigator.clipboard.writeText(text);
-        const copyBtn = document.querySelector(".copy-btn");
-        copyBtn.innerText = "✓ Copied";
-        setTimeout(() => { copyBtn.innerText = "📋 Copy"; }, 2000);
-    }
-}
-
-function closeStreamResponse() {
-    const streamBox = document.getElementById("response-stream-box");
-    const streamText = document.getElementById("stream-text");
-    streamText.innerText = "";
-    streamBox.style.display = "none";
-    if (synth) synth.cancel();
-    isSpeaking = false;
-    isProcessing = false;
-    if (isVoiceActive && recognition) {
-        try { recognition.start(); } catch (e) {}
-    }
-}
-
-// Voice Recognition setup
-function initSpeechRecognition() {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) return;
-
-    recognition = new SpeechRecognition();
-    recognition.continuous = true;
-    recognition.interimResults = true;
-    recognition.lang = "en-US";
-
-    recognition.onresult = (event) => {
-        if (isProcessing || isSpeaking) return;
-
-        let transcript = "";
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-            transcript += event.results[i][0].transcript;
-        }
-
-        document.getElementById("nexus-transcript").innerText = `"${transcript}"`;
-        const cmdLower = transcript.toLowerCase().trim();
-
-        if (event.results[event.results.length - 1].isFinal) {
-            handleVoiceIntent(cmdLower);
-        }
-    };
-
-    recognition.onerror = (e) => {
-        if (e.error !== "no-speech") {
-            isProcessing = false;
-        }
-        if (isVoiceActive && !isProcessing && !isSpeaking) {
-            try { recognition.start(); } catch (err) {}
-        }
-    };
-
-    recognition.onend = () => {
-        if (isVoiceActive && !isProcessing && !isSpeaking) {
-            try { recognition.start(); } catch (e) {}
-        }
-    };
-}
-
-function playJarvisChime(type = "activate") {
+async function fetchWorkspaceProjects() {
+    const box = document.getElementById("project-list-box");
+    if (!box) return;
     try {
-        const AudioCtx = window.AudioContext || window.webkitAudioContext;
-        if (!AudioCtx) return;
-        const ctx = new AudioCtx();
+        const res = await fetch("/api/workspace/projects");
+        const data = await res.json();
+        box.innerHTML = "";
+        if (data.projects && data.projects.length > 0) {
+            data.projects.slice(0, 6).forEach(p => {
+                const item = document.createElement("div");
+                item.className = "project-item";
+                item.onclick = () => executeQuickIntent(`open ${p.name}`);
+                item.innerHTML = `
+                    <span>📁 ${p.name}</span>
+                    ${p.isGit ? '<span class="git-badge">GIT</span>' : ''}
+                `;
+                box.appendChild(item);
+            });
+        } else {
+            box.innerHTML = '<div class="stream-empty">No projects in d:\\Projects.</div>';
+        }
+    } catch (err) {
+        box.innerHTML = '<div class="stream-empty">Workspace offline.</div>';
+    }
+}
+
+async function fetchNotesList() {
+    const box = document.getElementById("notes-list-box");
+    if (!box) return;
+    try {
+        const res = await fetch("/api/notes");
+        const data = await res.json();
+        box.innerHTML = "";
+        if (data.message && data.message.includes("•")) {
+            const lines = data.message.split("\n").filter(l => l.startsWith("•"));
+            lines.forEach(line => {
+                const card = document.createElement("div");
+                card.className = "note-card";
+                card.innerText = line.replace("•", "").trim();
+                box.appendChild(card);
+            });
+        } else {
+            box.innerHTML = '<div class="stream-empty">No active notes saved.</div>';
+        }
+    } catch (err) {
+        box.innerHTML = '<div class="stream-empty">Notes offline.</div>';
+    }
+}
+
+async function clearAllNotes() {
+    try {
+        await fetch("/api/notes", { method: "DELETE" });
+        logEvent("NOTE", "Memory notes buffer cleared.");
+        fetchNotesList();
+    } catch (err) {}
+}
+
+/* ==========================================================================
+   5. STARK INTERFACE AUDIO CHIMES (WEB AUDIO API)
+   ========================================================================== */
+function playStarkSound(type) {
+    try {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContext) return;
+        const ctx = new AudioContext();
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
 
@@ -253,13 +363,17 @@ function playJarvisChime(type = "activate") {
         gain.gain.setValueAtTime(0.04, ctx.currentTime);
 
         if (type === "activate") {
-            osc.frequency.setValueAtTime(587.33, ctx.currentTime);
-            osc.frequency.exponentialRampToValueAtTime(1174.66, ctx.currentTime + 0.12);
+            osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
+            osc.frequency.exponentialRampToValueAtTime(1174.66, ctx.currentTime + 0.12); // D6
             gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
-        } else {
-            osc.frequency.setValueAtTime(880, ctx.currentTime);
-            osc.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + 0.12);
-            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
+        } else if (type === "deactivate") {
+            osc.frequency.setValueAtTime(880, ctx.currentTime); // A5
+            osc.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + 0.12); // A4
+            gain.gain.exponentialRampToTime(0.001, ctx.currentTime + 0.15);
+        } else if (type === "action") {
+            osc.frequency.setValueAtTime(1046.50, ctx.currentTime); // C6
+            osc.frequency.exponentialRampToValueAtTime(1318.51, ctx.currentTime + 0.08); // E6
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12);
         }
 
         osc.connect(gain);
@@ -269,21 +383,60 @@ function playJarvisChime(type = "activate") {
     } catch (e) {}
 }
 
+/* ==========================================================================
+   6. VOICE ENGINE & SPEECH RECOGNITION
+   ========================================================================== */
+function initSpeechRecognition() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+        updateReactorState("OFFLINE", "Speech API not supported in this browser");
+        return;
+    }
+
+    recognition = new SpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = false;
+    recognition.lang = "en-US";
+
+    recognition.onresult = (event) => {
+        if (isSpeaking || isProcessing) return;
+        const last = event.results.length - 1;
+        const text = event.results[last][0].transcript.trim();
+        if (text) {
+            handleVoiceIntent(text);
+        }
+    };
+
+    recognition.onerror = (event) => {
+        if (event.error !== "no-speech" && event.error !== "aborted") {
+            isProcessing = false;
+            if (isVoiceActive) {
+                try { recognition.start(); } catch (e) {}
+            }
+        }
+    };
+
+    recognition.onend = () => {
+        if (isVoiceActive && !isSpeaking && !isProcessing) {
+            try { recognition.start(); } catch (e) {}
+        }
+    };
+}
+
 function toggleVoiceMode() {
     isVoiceActive = !isVoiceActive;
-    const micBtn = document.getElementById("mic-trigger");
 
     if (isVoiceActive) {
-        playJarvisChime("activate");
-        if (micBtn) micBtn.classList.add("active");
+        playStarkSound("activate");
+        logEvent("VOICE", "Voice Mode Activated. Listening for user queries...");
         if (!isProcessing && !isSpeaking) {
             updateReactorState("LISTENING", "Listening for command or query...");
             try { recognition.start(); } catch (e) {}
         }
     } else {
-        playJarvisChime("deactivate");
-        if (micBtn) micBtn.classList.remove("active");
-        updateReactorState("STANDBY", "Click Arc Reactor or press Space for voice mode");
+        playStarkSound("deactivate");
+        logEvent("VOICE", "Voice Mode Standby.");
+        updateReactorState("STANDBY", "Press Spacebar or Click Arc Reactor to speak");
         if (recognition) recognition.stop();
         if (synth) synth.cancel();
     }
@@ -293,13 +446,15 @@ function updateReactorState(state, transcriptText) {
     const stateEl = document.getElementById("nexus-state");
     const transcriptEl = document.getElementById("nexus-transcript");
 
-    stateEl.innerText = state;
-    if (transcriptText) transcriptEl.innerText = transcriptText;
+    if (stateEl) stateEl.innerText = state;
+    if (transcriptEl && transcriptText) transcriptEl.innerText = transcriptText;
 
-    if (state === "LISTENING") stateEl.style.color = "#38bdf8";
-    else if (state === "THINKING") stateEl.style.color = "#e2e8f0";
-    else if (state === "SPEAKING") stateEl.style.color = "#38bdf8";
-    else stateEl.style.color = "#64748b";
+    if (stateEl) {
+        if (state === "LISTENING") stateEl.style.color = "#00f0ff";
+        else if (state === "THINKING") stateEl.style.color = "#ffaa00";
+        else if (state === "SPEAKING") stateEl.style.color = "#00ffaa";
+        else stateEl.style.color = "#64748b";
+    }
 }
 
 async function handleVoiceIntent(cmdText) {
@@ -310,14 +465,8 @@ async function handleVoiceIntent(cmdText) {
         try { recognition.stop(); } catch (e) {}
     }
 
-    if (cmdText.includes("sleep") || cmdText.includes("standby")) {
-        isProcessing = false;
-        toggleVoiceMode();
-        speakText("Entering standby mode.");
-        return;
-    }
-
     updateReactorState("THINKING", `Processing: "${cmdText}"`);
+    logEvent("INTENT", `Query Received: "${cmdText}"`);
 
     try {
         const res = await fetch("/api/voice/intent", {
@@ -328,44 +477,43 @@ async function handleVoiceIntent(cmdText) {
         const data = await res.json();
 
         if (data.status === "action_executed") {
-            displayStreamResponse("NEXUS ACTION", data.message);
-            updateReactorState("SPEAKING", "Response ready");
+            logEvent("EXEC", `Intent: ${data.intent} -> SUCCESS`);
+            displayStreamResponse(`NEXUS // ${data.intent.toUpperCase()}`, data.message);
             speakText(data.message);
+            fetchTelemetry();
+            fetchNotesList();
         } else {
-            await executeQuery(cmdText);
+            // General Intelligence Fallback to LLM Stream
+            logEvent("AI", `Routing query to Intelligence Core...`);
+            streamChatResponse(cmdText);
         }
     } catch (err) {
-        isProcessing = false;
-        updateReactorState("STANDBY", "Error: " + err.message);
-        if (isVoiceActive && recognition) {
-            try { recognition.start(); } catch (e) {}
-        }
+        logEvent("WARN", `Intent Error: ${err.message}`);
+        streamChatResponse(cmdText);
     }
 }
 
-async function handleCommandSubmit(e) {
-    e.preventDefault();
-    const input = document.getElementById("cmd-input");
-    const query = input.value.trim();
-    if (!query) return;
-
-    input.value = "";
-    updateReactorState("THINKING", `Processing: "${query}"`);
-    await handleVoiceIntent(query);
+function executeQuickIntent(cmdText) {
+    playStarkSound("action");
+    handleVoiceIntent(cmdText);
 }
 
-async function executeQuery(query) {
-    const provider = document.getElementById("provider-select").value;
-    const apiKey = document.getElementById("api-key-input").value;
-    const model = document.getElementById("model-input").value;
-
+/* ==========================================================================
+   7. CHAT STREAMING & RESPONSE HUD
+   ========================================================================== */
+async function streamChatResponse(query) {
     const streamBox = document.getElementById("response-stream-box");
     const streamRole = document.getElementById("stream-role");
     const streamText = document.getElementById("stream-text");
 
-    streamText.innerText = "";
-    streamBox.style.display = "none";
+    streamBox.style.display = "block";
     streamRole.innerText = "NEXUS // COMPUTE CORE";
+    streamText.innerText = "";
+    updateReactorState("THINKING", "Synthesizing intelligence response...");
+
+    const provider = document.getElementById("provider-select").value;
+    const apiKey = document.getElementById("api-key-input").value;
+    const model = document.getElementById("model-input").value;
 
     try {
         const res = await fetch("/api/stream", {
@@ -381,58 +529,37 @@ async function executeQuery(query) {
 
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
-        let buffer = "";
+        let fullResponse = "";
 
         while (true) {
-            const { done, value } = await reader.read();
+            const { value, done } = await reader.read();
             if (done) break;
 
-            buffer += decoder.decode(value, { stream: true });
-            const events = buffer.split("\n\n");
-            buffer = events.pop() || "";
+            const chunk = decoder.decode(value, { stream: true });
+            const lines = chunk.split("\n");
 
-            for (const eventStr of events) {
-                const lines = eventStr.split("\n");
-                let eventType = "";
-                let eventData = "";
-
-                for (const l of lines) {
-                    const trimmed = l.trim();
-                    if (trimmed.startsWith("event:")) eventType = trimmed.replace("event:", "").trim();
-                    else if (trimmed.startsWith("data:")) eventData = trimmed.replace("data:", "").trim();
-                }
-
-                if (eventType === "token" && eventData) {
+            for (const line of lines) {
+                if (line.startsWith("data: ")) {
+                    const dataStr = line.slice(6).trim();
+                    if (!dataStr || dataStr === "{}") continue;
                     try {
-                        const token = JSON.parse(eventData);
-                        if (token !== undefined && token !== null) {
-                            streamBox.style.display = "block";
-                            streamText.innerText += token;
+                        const token = JSON.parse(dataStr);
+                        if (typeof token === "string") {
+                            fullResponse += token;
+                            streamText.innerText = fullResponse;
                         }
-                    } catch (e) {}
-                } else if (eventType === "error" && eventData) {
-                    try {
-                        const err = JSON.parse(eventData);
-                        streamBox.style.display = "block";
-                        streamText.innerText = "Execution Error: " + err;
                     } catch (e) {}
                 }
             }
         }
 
-        updateReactorState("SPEAKING", "Response ready");
-        if (isVoiceActive) {
-            speakText(streamText.innerText);
-        } else {
-            isProcessing = false;
-            updateReactorState("STANDBY", "Click Arc Reactor or press Space for voice mode");
-        }
+        logEvent("AI", `Response Generated (${fullResponse.length} chars)`);
+        speakText(fullResponse);
 
     } catch (err) {
-        isProcessing = false;
-        streamBox.style.display = "block";
         streamText.innerText = "Execution Error: " + err.message;
-        updateReactorState("STANDBY", "Error occurred");
+        updateReactorState("STANDBY", "Error occurred during execution");
+        isProcessing = false;
         if (isVoiceActive && recognition) {
             try { recognition.start(); } catch (e) {}
         }
@@ -454,6 +581,28 @@ function displayStreamResponse(role, text) {
     streamText.innerText = text;
 }
 
+function closeStreamResponse() {
+    const streamBox = document.getElementById("response-stream-box");
+    if (streamBox) streamBox.style.display = "none";
+    if (synth) synth.cancel();
+    isSpeaking = false;
+    isProcessing = false;
+    if (isVoiceActive && recognition) {
+        try { recognition.start(); } catch (e) {}
+    }
+}
+
+function copyStreamResponse() {
+    const text = document.getElementById("stream-text").innerText;
+    if (text) {
+        navigator.clipboard.writeText(text);
+        logEvent("CLIP", "Response copied to system clipboard.");
+    }
+}
+
+/* ==========================================================================
+   8. SPEECH SYNTHESIS (DEEP MALE VOICE)
+   ========================================================================== */
 function getMaleVoice() {
     if (!synth) return null;
     const voices = synth.getVoices();
@@ -475,9 +624,19 @@ function speakText(text) {
     }
     synth.cancel();
 
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = 1.0;
-    utterance.pitch = 0.9;
+    // Remove markdown symbols for speech synthesis
+    const cleanSpeech = text
+        .replace(/[#*_`~\[\]\(\)]/g, '')
+        .replace(/•/g, '')
+        .replace(/\n+/g, '. ');
+
+    const utterance = new SpeechSynthesisUtterance(cleanSpeech);
+    
+    const pitchSlider = document.getElementById("voice-pitch-slider");
+    const rateSlider = document.getElementById("voice-rate-slider");
+
+    utterance.pitch = pitchSlider ? parseFloat(pitchSlider.value) : 0.9;
+    utterance.rate = rateSlider ? parseFloat(rateSlider.value) : 1.0;
 
     const maleVoice = getMaleVoice();
     if (maleVoice) {
@@ -486,7 +645,7 @@ function speakText(text) {
 
     utterance.onstart = () => {
         isSpeaking = true;
-        updateReactorState("SPEAKING", text);
+        updateReactorState("SPEAKING", "Speaking response...");
     };
 
     utterance.onend = () => {
@@ -498,7 +657,7 @@ function speakText(text) {
                 try { recognition.start(); } catch (e) {}
             }
         } else {
-            updateReactorState("STANDBY", "Click Arc Reactor or press Space for voice mode");
+            updateReactorState("STANDBY", "Press Spacebar or Click Arc Reactor to speak");
         }
     };
 
@@ -513,7 +672,11 @@ function speakText(text) {
     synth.speak(utterance);
 }
 
+/* ==========================================================================
+   9. AUTOMATION ACTIONS (LAUNCH APPS, GIT, SECURITY AUDIT)
+   ========================================================================== */
 async function launchApp(appName) {
+    playStarkSound("action");
     try {
         const res = await fetch("/api/system/launch", {
             method: "POST",
@@ -521,21 +684,108 @@ async function launchApp(appName) {
             body: JSON.stringify({ appName: appName })
         });
         const data = await res.json();
+        logEvent("LAUNCH", data.message || `Launched: ${appName.toUpperCase()}`);
         displayStreamResponse("NEXUS LAUNCHER", data.message || `Launched ${appName}`);
     } catch (err) {
-        alert("Launch failed: " + err.message);
+        logEvent("WARN", `Launch failed: ${err.message}`);
     }
 }
 
-// Sleek High-End Audio Spectrum & Arc Ring Renderer
-function initArcCanvas() {
+async function executeGitAction(action) {
+    playStarkSound("action");
+    logEvent("GIT", `Executing: git ${action}...`);
+    try {
+        const res = await fetch("/api/git/action", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: action })
+        });
+        const data = await res.json();
+        displayStreamResponse(`GIT // ${action.toUpperCase()}`, data.output || "Git command executed.");
+    } catch (err) {
+        logEvent("WARN", `Git error: ${err.message}`);
+    }
+}
+
+async function runWorkspaceSecurityAudit() {
+    playStarkSound("action");
+    logEvent("SEC", "Initiating workspace security audit...");
+    try {
+        const res = await fetch("/api/security/audit", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ scanWorkspace: true })
+        });
+        const data = await res.json();
+        const scoreEl = document.getElementById("sec-score-val");
+        if (scoreEl) scoreEl.innerText = `${data.securityScore} / 100`;
+
+        const msg = `Security Audit Completed.\n• Integrity Score: ${data.securityScore}/100\n• Files Scanned: ${data.scannedFilesCount}\n• Vulnerabilities: ${data.vulnerabilities.length}`;
+        displayStreamResponse("SECURITY AUDIT", msg);
+        logEvent("SEC", `Audit complete. Score: ${data.securityScore}/100`);
+    } catch (err) {
+        logEvent("WARN", `Security audit error: ${err.message}`);
+    }
+}
+
+function handleCommandSubmit(e) {
+    e.preventDefault();
+    const input = document.getElementById("cmd-input");
+    const query = input.value.trim();
+    if (!query) return;
+
+    input.value = "";
+    handleVoiceIntent(query);
+}
+
+/* ==========================================================================
+   10. CONFIGURATION PERSISTENCE
+   ========================================================================== */
+function saveEngineConfig() {
+    const prov = document.getElementById("provider-select").value;
+    const key = document.getElementById("api-key-input").value;
+    const model = document.getElementById("model-input").value;
+
+    localStorage.setItem("nexus_provider", prov);
+    localStorage.setItem("nexus_api_key", key);
+    localStorage.setItem("nexus_model", model);
+
+    const msg = document.getElementById("save-status-msg");
+    msg.innerText = "✓ Configuration saved.";
+    msg.style.display = "block";
+    logEvent("CFG", `Engine config saved: ${prov.toUpperCase()} // ${model}`);
+    setTimeout(() => { msg.style.display = "none"; }, 2500);
+}
+
+function loadSavedEngineConfig() {
+    const prov = localStorage.getItem("nexus_provider");
+    const key = localStorage.getItem("nexus_api_key");
+    const model = localStorage.getItem("nexus_model");
+
+    if (prov) {
+        document.getElementById("provider-select").value = prov;
+        const keyGroup = document.getElementById("key-field-group");
+        keyGroup.style.display = prov === "ollama" ? "none" : "block";
+    }
+    if (key) {
+        document.getElementById("api-key-input").value = key;
+    }
+    if (model) {
+        document.getElementById("model-input").value = model;
+    }
+}
+
+/* ==========================================================================
+   11. MULTI-LAYER ARC REACTOR CANVAS ENGINE (60 FPS)
+   ========================================================================== */
+function initArcReactorCanvas() {
     const canvas = document.getElementById("arc-canvas");
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
 
     const dpi = window.devicePixelRatio || 2;
-    canvas.width = 340 * dpi;
-    canvas.height = 340 * dpi;
+    canvas.width = 460 * dpi;
+    canvas.height = 460 * dpi;
 
     let angle = 0;
 
@@ -544,23 +794,23 @@ function initArcCanvas() {
         ctx.save();
         ctx.scale(dpi, dpi);
 
-        const cx = 170;
-        const cy = 170;
+        const cx = 230;
+        const cy = 230;
 
-        // 1. Rotating Outer Ticks Ring
+        // 1. Counter-Rotating Outer Calibration Ticks
         ctx.save();
         ctx.translate(cx, cy);
-        ctx.rotate(angle * 0.3);
-        ctx.lineWidth = 1;
-        for (let i = 0; i < 48; i++) {
-            const rot = (i / 48) * Math.PI * 2;
-            const isMajor = i % 12 === 0;
-            const len = isMajor ? 8 : 4;
-            const r1 = 162;
+        ctx.rotate(angle * 0.25);
+        for (let i = 0; i < 60; i++) {
+            const rot = (i / 60) * Math.PI * 2;
+            const isMajor = i % 15 === 0;
+            const isMedium = i % 5 === 0;
+            const len = isMajor ? 12 : (isMedium ? 7 : 4);
+            const r1 = 170;
             const r2 = r1 - len;
 
-            ctx.strokeStyle = isMajor ? "#00f0ff" : "rgba(0, 240, 255, 0.25)";
-            ctx.lineWidth = isMajor ? 2 : 1;
+            ctx.strokeStyle = isMajor ? "#00f0ff" : (isMedium ? "rgba(0, 240, 255, 0.6)" : "rgba(0, 240, 255, 0.2)");
+            ctx.lineWidth = isMajor ? 2.5 : 1;
             ctx.beginPath();
             ctx.moveTo(Math.cos(rot) * r1, Math.sin(rot) * r1);
             ctx.lineTo(Math.cos(rot) * r2, Math.sin(rot) * r2);
@@ -568,23 +818,36 @@ function initArcCanvas() {
         }
         ctx.restore();
 
-        // 2. High-Frequency Audio Waveform Bars on Speech
-        if (isSpeaking) {
+        // 2. Counter-Rotating Inner Filament Arc
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(-angle * 0.4);
+        ctx.strokeStyle = "rgba(0, 240, 255, 0.4)";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(0, 0, 142, 0, Math.PI * 1.6);
+        ctx.stroke();
+        ctx.restore();
+
+        // 3. Audio Frequency Oscilloscope Waves (Reacts when Speaking or Listening)
+        if (isSpeaking || isVoiceActive) {
             ctx.save();
             ctx.translate(cx, cy);
-            const numBars = 64;
-            const radius = 135;
+            const numBars = 72;
+            const radius = 125;
 
             for (let i = 0; i < numBars; i++) {
-                const barAngle = (i / numBars) * Math.PI * 2 + angle;
-                const barHeight = 8 + Math.random() * 22;
+                const barAngle = (i / numBars) * Math.PI * 2 + angle * 0.5;
+                const dynamicHeight = isSpeaking 
+                    ? (6 + Math.random() * 26) 
+                    : (3 + Math.sin(angle * 4 + i) * 8);
 
                 const x1 = Math.cos(barAngle) * radius;
                 const y1 = Math.sin(barAngle) * radius;
-                const x2 = Math.cos(barAngle) * (radius + barHeight);
-                const y2 = Math.sin(barAngle) * (radius + barHeight);
+                const x2 = Math.cos(barAngle) * (radius + dynamicHeight);
+                const y2 = Math.sin(barAngle) * (radius + dynamicHeight);
 
-                ctx.strokeStyle = "rgba(0, 240, 255, 0.9)";
+                ctx.strokeStyle = isSpeaking ? "#00ffaa" : "rgba(0, 240, 255, 0.85)";
                 ctx.lineWidth = 2;
                 ctx.beginPath();
                 ctx.moveTo(x1, y1);
@@ -594,24 +857,7 @@ function initArcCanvas() {
             ctx.restore();
         }
 
-        // 3. Smooth Inner Pulsing Wave Arc
-        ctx.save();
-        ctx.translate(cx, cy);
-        ctx.rotate(-angle * 0.5);
-        ctx.strokeStyle = "rgba(255, 255, 255, 0.7)";
-        ctx.lineWidth = 2.5;
-        const waveArc = Math.PI * 0.4;
-        ctx.beginPath();
-        ctx.arc(0, 0, 88, 0, waveArc);
-        ctx.stroke();
-
-        ctx.beginPath();
-        ctx.arc(0, 0, 88, Math.PI, Math.PI + waveArc);
-        ctx.stroke();
-        ctx.restore();
-
-        ctx.restore();
-        angle += isSpeaking ? 0.04 : 0.015;
+        angle += 0.015;
         requestAnimationFrame(render);
     }
 
