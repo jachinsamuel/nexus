@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NEXUS // STARK INDUSTRIES TACTICAL HUD</title>
+    <title>NEXUS</title>
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -11,45 +11,32 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <!-- Tactical Grid Scanlines & HUD Vignette -->
+    <!-- Subtle Ambient Backdrop -->
     <div class="hud-scanlines"></div>
     <div class="hud-vignette"></div>
 
     <div class="hud-viewport">
-        <!-- 1. Stark Topbar -->
+        <!-- 1. Minimal Topbar (Clean, No brand titles or messy subtitle text) -->
         <header class="stark-topbar">
             <div class="topbar-left">
                 <div class="arc-indicator-beacon" id="beacon-indicator"></div>
-                <div class="brand-block">
-                    <span class="brand-title">N E X U S</span>
-                    <span class="brand-sub">STARK MK-VII // TACTICAL AEROSPACE CORE</span>
+                <div class="topbar-status-tag">
+                    <span class="status-dot"></span>
+                    <span class="status-text">ONLINE</span>
                 </div>
             </div>
 
             <div class="topbar-center">
-                <div class="hud-clock-badge">
-                    <span class="hud-label">UPTIME</span>
-                    <span class="hud-val" id="hud-uptime">00:00:00</span>
-                </div>
-                <div class="hud-clock-badge">
-                    <span class="hud-label">LINK</span>
-                    <span class="hud-val live-ping" id="hud-ping">PING --ms</span>
-                </div>
-                <div class="hud-clock-badge">
-                    <span class="hud-label">SYNC</span>
-                    <span class="hud-val">ONLINE 60Hz</span>
+                <div class="telemetry-compact" id="telemetry-compact">
+                    <span class="telem-item" id="hdr-cpu">CPU --%</span>
+                    <span class="telem-sep">/</span>
+                    <span class="telem-item" id="hdr-ram">RAM --GB</span>
+                    <span class="telem-sep">/</span>
+                    <span class="telem-item live-ping" id="hdr-ping">PING --ms</span>
                 </div>
             </div>
 
             <div class="topbar-right">
-                <div class="telemetry-compact" id="telemetry-compact">
-                    <span class="telem-item" id="hdr-cpu">CPU --%</span>
-                    <span class="telem-sep">|</span>
-                    <span class="telem-item" id="hdr-ram">RAM --GB</span>
-                    <span class="telem-sep">|</span>
-                    <span class="telem-item" id="hdr-bat">BAT --%</span>
-                </div>
-
                 <div class="topbar-actions">
                     <button class="hud-btn" id="btn-toggle-telemetry" onclick="toggleTelemetryPanel()" title="Toggle Telemetry [L]">
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/></svg>
@@ -67,275 +54,256 @@
             </div>
         </header>
 
-        <!-- 2. Main 3-Zone Workspace Grid -->
-        <div class="hud-main-grid">
-            <!-- Left Zone: Live Hardware Telemetry & Processes (Collapsible) -->
-            <aside class="hud-panel hud-panel-left" id="telemetry-panel">
-                <div class="panel-header">
-                    <span class="panel-title">// TELEMETRY & RESOURCES</span>
-                    <span class="panel-tag">SYS.DIAG</span>
+        <!-- 2. Clean Center Stage (Spacious, Uncluttered, High-End Focus) -->
+        <main class="reactor-stage">
+            <!-- Arc Reactor Interactive Container -->
+            <div class="arc-reactor-interactive" id="arc-reactor-core" title="Click or Press Spacebar for Voice Mode">
+                <div class="arc-ring-outer"></div>
+                <div class="arc-ring-halo"></div>
+                <div class="arc-canvas-box">
+                    <canvas id="arc-canvas" width="400" height="400"></canvas>
+                    <div class="arc-obsidian-center">
+                        <span class="arc-brand-text">NEXUS</span>
+                        <span class="arc-core-pulse"></span>
+                    </div>
                 </div>
+            </div>
 
-                <div class="panel-body custom-scroll">
-                    <!-- CPU Gauge -->
-                    <div class="telem-block">
-                        <div class="telem-row">
-                            <span class="telem-label">CPU CORE LOAD</span>
-                            <span class="telem-val" id="diag-cpu-val">--%</span>
-                        </div>
-                        <div class="telem-meter-track">
-                            <div class="telem-meter-bar" id="diag-cpu-bar" style="width: 0%;"></div>
-                        </div>
-                        <div class="telem-meta" id="diag-cpu-meta">Logical Cores: --</div>
+            <!-- Tactical Voice State & Subtitle -->
+            <div class="voice-status-group">
+                <div class="voice-state-badge" id="nexus-state">STANDBY</div>
+                <div class="voice-transcript-hud" id="nexus-transcript">Press Spacebar or Click Arc Reactor to speak</div>
+            </div>
+
+            <!-- Floating Holographic Response HUD Card -->
+            <div class="holographic-response-card" id="response-stream-box" style="display: none;">
+                <div class="holo-header">
+                    <div class="holo-title-group">
+                        <span class="holo-beacon"></span>
+                        <span class="holo-role" id="stream-role">NEXUS // COMPUTE CORE</span>
                     </div>
-
-                    <!-- RAM Allocation -->
-                    <div class="telem-block">
-                        <div class="telem-row">
-                            <span class="telem-label">RAM ALLOCATION</span>
-                            <span class="telem-val" id="diag-ram-val">-- / -- GB</span>
-                        </div>
-                        <div class="telem-meter-track">
-                            <div class="telem-meter-bar" id="diag-ram-bar" style="width: 0%;"></div>
-                        </div>
-                        <div class="telem-meta" id="diag-ram-pct">Utilization: --%</div>
-                    </div>
-
-                    <!-- Disk Storage -->
-                    <div class="telem-block">
-                        <div class="telem-row">
-                            <span class="telem-label">DISK CAPACITY</span>
-                            <span class="telem-val" id="diag-disk-val">--%</span>
-                        </div>
-                        <div class="telem-meter-track">
-                            <div class="telem-meter-bar meter-amber" id="diag-disk-bar" style="width: 0%;"></div>
-                        </div>
-                        <div class="telem-meta" id="diag-disk-meta">Storage Total: -- GB</div>
-                    </div>
-
-                    <!-- Process Explorer Section -->
-                    <div class="panel-section-divider">
-                        <span>TOP PROCESSES</span>
-                        <button class="mini-hud-btn" onclick="fetchProcessList()" title="Refresh Processes">
-                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                    <div class="holo-actions">
+                        <button class="holo-btn" onclick="copyStreamResponse()" title="Copy Readout">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                            <span>COPY</span>
                         </button>
-                    </div>
-
-                    <div class="process-stream" id="proc-list-box">
-                        <div class="stream-empty">Scanning active processes...</div>
-                    </div>
-
-                    <!-- Workspace Project Nodes -->
-                    <div class="panel-section-divider">
-                        <span>WORKSPACE REPOSITORIES</span>
-                        <button class="mini-hud-btn" onclick="fetchWorkspaceProjects()" title="Scan Projects">
-                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
-                        </button>
-                    </div>
-
-                    <div class="projects-stream" id="project-list-box">
-                        <div class="stream-empty">Scanning d:\Projects...</div>
-                    </div>
-
-                    <!-- Persistent Notes Section -->
-                    <div class="panel-section-divider">
-                        <span>VOICE NOTES & MEMORY</span>
-                        <button class="mini-hud-btn" onclick="clearAllNotes()" title="Clear Notes">CLEAR</button>
-                    </div>
-
-                    <div class="notes-stream" id="notes-list-box">
-                        <div class="stream-empty">No active notes recorded.</div>
+                        <button class="holo-btn-close" onclick="closeStreamResponse()" title="Dismiss">&times;</button>
                     </div>
                 </div>
-            </aside>
+                <div class="holo-body custom-scroll" id="stream-text"></div>
+            </div>
 
-            <!-- Center Stage: Arc Reactor & Voice Core -->
-            <main class="reactor-stage">
-                <!-- Tactical Corner Brackets -->
-                <div class="hud-bracket top-left">⌜</div>
-                <div class="hud-bracket top-right">⌝</div>
-                <div class="hud-bracket bottom-left">⌞</div>
-                <div class="hud-bracket bottom-right">⌟</div>
+            <!-- Tactical Quick Command Chips -->
+            <div class="tactical-chips-dock">
+                <button class="chip-btn" onclick="executeQuickIntent('house party protocol')">
+                    <svg class="chip-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                    <span>HOUSE PARTY</span>
+                </button>
+                <button class="chip-btn" onclick="executeQuickIntent('lockdown protocol')">
+                    <svg class="chip-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                    <span>LOCKDOWN</span>
+                </button>
+                <button class="chip-btn" onclick="executeQuickIntent('explain available protocols')">
+                    <svg class="chip-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                    <span>PROTOCOLS</span>
+                </button>
+                <button class="chip-btn" onclick="executeQuickIntent('latest news briefing')">
+                    <svg class="chip-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8"/><path d="M15 18h-5"/><path d="M10 6h8v4h-8V6Z"/></svg>
+                    <span>NEWS</span>
+                </button>
+                <button class="chip-btn" onclick="executeQuickIntent('storage telemetry')">
+                    <svg class="chip-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="12" x2="2" y2="12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/><line x1="6" y1="16" x2="6.01" y2="16"/><line x1="10" y1="16" x2="10.01" y2="16"/></svg>
+                    <span>STORAGE</span>
+                </button>
+                <button class="chip-btn" onclick="executeQuickIntent('read clipboard')">
+                    <svg class="chip-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
+                    <span>CLIPBOARD</span>
+                </button>
+                <button class="chip-btn" onclick="executeQuickIntent('take screenshot')">
+                    <svg class="chip-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                    <span>SCREENSHOT</span>
+                </button>
+                <button class="chip-btn" onclick="executeQuickIntent('git status')">
+                    <svg class="chip-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg>
+                    <span>GIT</span>
+                </button>
+                <button class="chip-btn" onclick="executeQuickIntent('what can you do')">
+                    <svg class="chip-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    <span>ALL FEATURES</span>
+                </button>
+            </div>
 
-                <!-- Tactical Grid Telemetry Coordinates -->
-                <div class="stage-coord coord-tl">LAT 13.0827° N // LON 80.2707° E</div>
-                <div class="stage-coord coord-tr">AZIMUTH 042° // NOMINAL</div>
-                <div class="stage-coord coord-bl">STARK PROTOCOL MK-VII</div>
-                <div class="stage-coord coord-br">AI CORE: ACTIVE</div>
-
-                <!-- Arc Reactor Interactive Container -->
-                <div class="arc-reactor-interactive" id="arc-reactor-core" title="Click to Toggle Voice Mode [Spacebar]">
-                    <div class="arc-ring-outer"></div>
-                    <div class="arc-ring-halo"></div>
-                    <div class="arc-canvas-box">
-                        <canvas id="arc-canvas" width="460" height="460"></canvas>
-                        <div class="arc-obsidian-center">
-                            <span class="arc-brand-text">NEXUS</span>
-                            <span class="arc-core-pulse"></span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Tactical Voice State & Subtitle -->
-                <div class="voice-status-group">
-                    <div class="voice-state-badge" id="nexus-state">STANDBY</div>
-                    <div class="voice-transcript-hud" id="nexus-transcript">Press Spacebar or Click Arc Reactor to speak</div>
-                </div>
-
-                <!-- Floating Holographic Response HUD Card -->
-                <div class="holographic-response-card" id="response-stream-box" style="display: none;">
-                    <div class="holo-header">
-                        <div class="holo-title-group">
-                            <span class="holo-beacon"></span>
-                            <span class="holo-role" id="stream-role">NEXUS // COMPUTE CORE</span>
-                        </div>
-                        <div class="holo-actions">
-                            <button class="holo-btn" onclick="copyStreamResponse()" title="Copy Readout">
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-                                <span>COPY</span>
-                            </button>
-                            <button class="holo-btn-close" onclick="closeStreamResponse()" title="Dismiss">&times;</button>
-                        </div>
-                    </div>
-                    <div class="holo-body custom-scroll" id="stream-text"></div>
-                </div>
-
-                <!-- Tactical Quick Command Chips (Vector Icon Based) -->
-                <div class="tactical-chips-dock">
-                    <button class="chip-btn" onclick="executeQuickIntent('house party protocol')">
-                        <svg class="chip-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-                        <span>HOUSE PARTY</span>
+            <!-- Quick Typing Capsule (Press / or T) -->
+            <div class="quick-input-capsule" id="quick-input-capsule" style="display: none;">
+                <form id="cmd-form" class="capsule-form">
+                    <input type="text" id="cmd-input" placeholder="Enter tactical command or query..." autocomplete="off">
+                    <button type="submit" class="capsule-send-btn" title="Send Command">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
                     </button>
-                    <button class="chip-btn" onclick="executeQuickIntent('lockdown protocol')">
-                        <svg class="chip-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                        <span>LOCKDOWN</span>
-                    </button>
-                    <button class="chip-btn" onclick="executeQuickIntent('explain available protocols')">
-                        <svg class="chip-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                        <span>PROTOCOLS</span>
-                    </button>
-                    <button class="chip-btn" onclick="executeQuickIntent('latest news briefing')">
-                        <svg class="chip-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8"/><path d="M15 18h-5"/><path d="M10 6h8v4h-8V6Z"/></svg>
-                        <span>NEWS</span>
-                    </button>
-                    <button class="chip-btn" onclick="executeQuickIntent('internet latency ping')">
-                        <svg class="chip-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>
-                        <span>PING</span>
-                    </button>
-                    <button class="chip-btn" onclick="executeQuickIntent('storage telemetry')">
-                        <svg class="chip-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="12" x2="2" y2="12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/><line x1="6" y1="16" x2="6.01" y2="16"/><line x1="10" y1="16" x2="10.01" y2="16"/></svg>
-                        <span>STORAGE</span>
-                    </button>
-                    <button class="chip-btn" onclick="executeQuickIntent('read clipboard')">
-                        <svg class="chip-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
-                        <span>CLIPBOARD</span>
-                    </button>
-                    <button class="chip-btn" onclick="executeQuickIntent('take screenshot')">
-                        <svg class="chip-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-                        <span>SCREENSHOT</span>
-                    </button>
-                    <button class="chip-btn" onclick="executeQuickIntent('git status')">
-                        <svg class="chip-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg>
-                        <span>GIT</span>
-                    </button>
-                    <button class="chip-btn" onclick="executeQuickIntent('what can you do')">
-                        <svg class="chip-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                        <span>ALL FEATURES</span>
-                    </button>
-                </div>
-
-                <!-- Quick Typing Capsule -->
-                <div class="quick-input-capsule" id="quick-input-capsule" style="display: none;">
-                    <form id="cmd-form" class="capsule-form">
-                        <input type="text" id="cmd-input" placeholder="Enter tactical command or query..." autocomplete="off">
-                        <button type="submit" class="capsule-send-btn" title="Send Command">
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
-                        </button>
-                    </form>
-                </div>
-            </main>
-
-            <!-- Right Zone: System Automation & Tactical Event Log (Collapsible) -->
-            <aside class="hud-panel hud-panel-right" id="automation-panel">
-                <div class="panel-header">
-                    <span class="panel-title">// AUTOMATION & LOG CENTER</span>
-                    <span class="panel-tag">EVENT.STREAM</span>
-                </div>
-
-                <div class="panel-body custom-scroll">
-                    <!-- Quick System Launcher (Vector Icon Based) -->
-                    <div class="telem-block">
-                        <span class="telem-label" style="margin-bottom: 8px;">RAPID APPLICATION LAUNCHER</span>
-                        <div class="quick-launch-grid">
-                            <button class="launch-card" onclick="launchApp('vscode')">
-                                <svg class="launch-icon-svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
-                                <span class="launch-name">VS CODE</span>
-                            </button>
-                            <button class="launch-card" onclick="launchApp('chrome')">
-                                <svg class="launch-icon-svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-                                <span class="launch-name">CHROME</span>
-                            </button>
-                            <button class="launch-card" onclick="launchApp('terminal')">
-                                <svg class="launch-icon-svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
-                                <span class="launch-name">TERMINAL</span>
-                            </button>
-                            <button class="launch-card" onclick="launchApp('explorer')">
-                                <svg class="launch-icon-svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-                                <span class="launch-name">EXPLORER</span>
-                            </button>
-                            <button class="launch-card" onclick="launchApp('taskmgr')">
-                                <svg class="launch-icon-svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-                                <span class="launch-name">TASK MGR</span>
-                            </button>
-                            <button class="launch-card" onclick="launchApp('spotify')">
-                                <svg class="launch-icon-svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
-                                <span class="launch-name">SPOTIFY</span>
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Git Automation Hub -->
-                    <div class="panel-section-divider">
-                        <span>GIT WORKSPACE AUTOMATION</span>
-                    </div>
-                    <div class="git-action-grid">
-                        <button class="git-btn" onclick="executeGitAction('status')">GIT STATUS</button>
-                        <button class="git-btn" onclick="executeGitAction('log')">GIT LOG</button>
-                        <button class="git-btn" onclick="executeGitAction('diff')">GIT DIFF</button>
-                        <button class="git-btn" onclick="executeGitAction('branch')">GIT BRANCH</button>
-                    </div>
-
-                    <!-- Security Audit Trigger -->
-                    <div class="panel-section-divider">
-                        <span>WORKSPACE SECURITY AUDIT</span>
-                    </div>
-                    <div class="security-card">
-                        <div class="sec-score-row">
-                            <span class="sec-label">INTEGRITY SCORE</span>
-                            <span class="sec-score" id="sec-score-val">100 / 100</span>
-                        </div>
-                        <button class="sec-scan-btn" onclick="runWorkspaceSecurityAudit()">RUN SECURITY SCAN</button>
-                    </div>
-
-                    <!-- Real-Time Activity Log Terminal -->
-                    <div class="panel-section-divider">
-                        <span>TACTICAL EVENT STREAM</span>
-                        <button class="mini-hud-btn" onclick="clearEventLog()" title="Clear Log">CLEAR</button>
-                    </div>
-
-                    <div class="activity-log-terminal custom-scroll" id="activity-log-stream">
-                        <div class="log-entry log-sys">[00:00:00] NEXUS CORE INITIALIZED.</div>
-                        <div class="log-entry log-ready">[00:00:01] ALL SENSORS & TELEMETRY ONLINE.</div>
-                    </div>
-                </div>
-            </aside>
-        </div>
+                </form>
+            </div>
+        </main>
     </div>
 
-    <!-- Hidden Settings Drawer -->
+    <!-- 3. Slide-in Left Drawer: Telemetry & Resources -->
+    <aside class="hud-drawer hud-drawer-left" id="telemetry-drawer">
+        <div class="drawer-header">
+            <span class="drawer-title">SYSTEM TELEMETRY & RESOURCES</span>
+            <button class="drawer-close" onclick="toggleTelemetryPanel()">&times;</button>
+        </div>
+
+        <div class="drawer-body custom-scroll">
+            <!-- CPU Gauge -->
+            <div class="telem-block">
+                <div class="telem-row">
+                    <span class="telem-label">CPU CORE LOAD</span>
+                    <span class="telem-val" id="diag-cpu-val">--%</span>
+                </div>
+                <div class="telem-meter-track">
+                    <div class="telem-meter-bar" id="diag-cpu-bar" style="width: 0%;"></div>
+                </div>
+                <div class="telem-meta" id="diag-cpu-meta">Logical Cores: --</div>
+            </div>
+
+            <!-- RAM Allocation -->
+            <div class="telem-block">
+                <div class="telem-row">
+                    <span class="telem-label">RAM ALLOCATION</span>
+                    <span class="telem-val" id="diag-ram-val">-- / -- GB</span>
+                </div>
+                <div class="telem-meter-track">
+                    <div class="telem-meter-bar" id="diag-ram-bar" style="width: 0%;"></div>
+                </div>
+                <div class="telem-meta" id="diag-ram-pct">Utilization: --%</div>
+            </div>
+
+            <!-- Disk Storage -->
+            <div class="telem-block">
+                <div class="telem-row">
+                    <span class="telem-label">DISK CAPACITY</span>
+                    <span class="telem-val" id="diag-disk-val">--%</span>
+                </div>
+                <div class="telem-meter-track">
+                    <div class="telem-meter-bar meter-amber" id="diag-disk-bar" style="width: 0%;"></div>
+                </div>
+                <div class="telem-meta" id="diag-disk-meta">Storage Total: -- GB</div>
+            </div>
+
+            <!-- Process Explorer Section -->
+            <div class="panel-section-divider">
+                <span>TOP PROCESSES</span>
+                <button class="mini-hud-btn" onclick="fetchProcessList()" title="Refresh Processes">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                </button>
+            </div>
+
+            <div class="process-stream" id="proc-list-box">
+                <div class="stream-empty">Scanning active processes...</div>
+            </div>
+
+            <!-- Workspace Project Nodes -->
+            <div class="panel-section-divider">
+                <span>WORKSPACE REPOSITORIES</span>
+                <button class="mini-hud-btn" onclick="fetchWorkspaceProjects()" title="Scan Projects">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                </button>
+            </div>
+
+            <div class="projects-stream" id="project-list-box">
+                <div class="stream-empty">Scanning d:\Projects...</div>
+            </div>
+
+            <!-- Persistent Notes Section -->
+            <div class="panel-section-divider">
+                <span>VOICE NOTES & MEMORY</span>
+                <button class="mini-hud-btn" onclick="clearAllNotes()" title="Clear Notes">CLEAR</button>
+            </div>
+
+            <div class="notes-stream" id="notes-list-box">
+                <div class="stream-empty">No active notes recorded.</div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- 4. Slide-in Right Drawer: Automation & Activity Log -->
+    <aside class="hud-drawer hud-drawer-right" id="automation-drawer">
+        <div class="drawer-header">
+            <span class="drawer-title">AUTOMATION & ACTIVITY STREAM</span>
+            <button class="drawer-close" onclick="toggleAutomationPanel()">&times;</button>
+        </div>
+
+        <div class="drawer-body custom-scroll">
+            <!-- Quick System Launcher -->
+            <div class="telem-block">
+                <span class="telem-label" style="margin-bottom: 8px;">RAPID APPLICATION LAUNCHER</span>
+                <div class="quick-launch-grid">
+                    <button class="launch-card" onclick="launchApp('vscode')">
+                        <svg class="launch-icon-svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                        <span class="launch-name">VS CODE</span>
+                    </button>
+                    <button class="launch-card" onclick="launchApp('chrome')">
+                        <svg class="launch-icon-svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                        <span class="launch-name">CHROME</span>
+                    </button>
+                    <button class="launch-card" onclick="launchApp('terminal')">
+                        <svg class="launch-icon-svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+                        <span class="launch-name">TERMINAL</span>
+                    </button>
+                    <button class="launch-card" onclick="launchApp('explorer')">
+                        <svg class="launch-icon-svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                        <span class="launch-name">EXPLORER</span>
+                    </button>
+                    <button class="launch-card" onclick="launchApp('taskmgr')">
+                        <svg class="launch-icon-svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                        <span class="launch-name">TASK MGR</span>
+                    </button>
+                    <button class="launch-card" onclick="launchApp('spotify')">
+                        <svg class="launch-icon-svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+                        <span class="launch-name">SPOTIFY</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Git Automation Hub -->
+            <div class="panel-section-divider">
+                <span>GIT WORKSPACE AUTOMATION</span>
+            </div>
+            <div class="git-action-grid">
+                <button class="git-btn" onclick="executeGitAction('status')">GIT STATUS</button>
+                <button class="git-btn" onclick="executeGitAction('log')">GIT LOG</button>
+                <button class="git-btn" onclick="executeGitAction('diff')">GIT DIFF</button>
+                <button class="git-btn" onclick="executeGitAction('branch')">GIT BRANCH</button>
+            </div>
+
+            <!-- Security Audit Trigger -->
+            <div class="panel-section-divider">
+                <span>WORKSPACE SECURITY AUDIT</span>
+            </div>
+            <div class="security-card">
+                <div class="sec-score-row">
+                    <span class="sec-label">INTEGRITY SCORE</span>
+                    <span class="sec-score" id="sec-score-val">100 / 100</span>
+                </div>
+                <button class="sec-scan-btn" onclick="runWorkspaceSecurityAudit()">RUN SECURITY SCAN</button>
+            </div>
+
+            <!-- Real-Time Activity Log Terminal -->
+            <div class="panel-section-divider">
+                <span>TACTICAL EVENT STREAM</span>
+                <button class="mini-hud-btn" onclick="clearEventLog()" title="Clear Log">CLEAR</button>
+            </div>
+
+            <div class="activity-log-terminal custom-scroll" id="activity-log-stream">
+                <div class="log-entry log-sys">[00:00:00] NEXUS CORE INITIALIZED.</div>
+                <div class="log-entry log-ready">[00:00:01] ALL SENSORS & TELEMETRY ONLINE.</div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- 5. Settings Drawer -->
     <div class="settings-drawer" id="settings-drawer" style="display: none;">
         <div class="drawer-header">
-            <span>ENGINE CONFIGURATION // STARK CORE</span>
+            <span>ENGINE CONFIGURATION</span>
             <button class="drawer-close" onclick="toggleSettingsDrawer()">&times;</button>
         </div>
         <div class="drawer-body custom-scroll">

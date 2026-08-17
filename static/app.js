@@ -100,6 +100,14 @@ function setupKeyboardAndMouseListeners() {
             if (drawer && drawer.style.display !== "none") {
                 drawer.style.display = "none";
             }
+            const telemDrawer = document.getElementById("telemetry-drawer");
+            if (telemDrawer && telemDrawer.classList.contains("open")) {
+                toggleTelemetryPanel();
+            }
+            const autoDrawer = document.getElementById("automation-drawer");
+            if (autoDrawer && autoDrawer.classList.contains("open")) {
+                toggleAutomationPanel();
+            }
         }
     });
 
@@ -155,31 +163,19 @@ function clearEventLog() {
    3. UI PANEL TOGGLES & UPTIME
    ========================================================================== */
 function toggleTelemetryPanel() {
-    const grid = document.querySelector(".hud-main-grid");
+    const drawer = document.getElementById("telemetry-drawer");
     const btn = document.getElementById("btn-toggle-telemetry");
-    isLeftPanelOpen = !isLeftPanelOpen;
-
-    if (isLeftPanelOpen) {
-        grid.classList.remove("left-collapsed");
-        btn.classList.add("active");
-    } else {
-        grid.classList.add("left-collapsed");
-        btn.classList.remove("active");
-    }
+    if (!drawer) return;
+    drawer.classList.toggle("open");
+    if (btn) btn.classList.toggle("active", drawer.classList.contains("open"));
 }
 
 function toggleAutomationPanel() {
-    const grid = document.querySelector(".hud-main-grid");
+    const drawer = document.getElementById("automation-drawer");
     const btn = document.getElementById("btn-toggle-automation");
-    isRightPanelOpen = !isRightPanelOpen;
-
-    if (isRightPanelOpen) {
-        grid.classList.remove("right-collapsed");
-        btn.classList.add("active");
-    } else {
-        grid.classList.add("right-collapsed");
-        btn.classList.remove("active");
-    }
+    if (!drawer) return;
+    drawer.classList.toggle("open");
+    if (btn) btn.classList.toggle("active", drawer.classList.contains("open"));
 }
 
 function toggleQuickInput() {
@@ -784,8 +780,8 @@ function initArcReactorCanvas() {
     const ctx = canvas.getContext("2d");
 
     const dpi = window.devicePixelRatio || 2;
-    canvas.width = 460 * dpi;
-    canvas.height = 460 * dpi;
+    canvas.width = 400 * dpi;
+    canvas.height = 400 * dpi;
 
     let angle = 0;
 
@@ -794,8 +790,8 @@ function initArcReactorCanvas() {
         ctx.save();
         ctx.scale(dpi, dpi);
 
-        const cx = 230;
-        const cy = 230;
+        const cx = 200;
+        const cy = 200;
 
         // 1. Counter-Rotating Outer Calibration Ticks
         ctx.save();
@@ -805,12 +801,12 @@ function initArcReactorCanvas() {
             const rot = (i / 60) * Math.PI * 2;
             const isMajor = i % 15 === 0;
             const isMedium = i % 5 === 0;
-            const len = isMajor ? 12 : (isMedium ? 7 : 4);
-            const r1 = 170;
+            const len = isMajor ? 10 : (isMedium ? 6 : 3);
+            const r1 = 152;
             const r2 = r1 - len;
 
             ctx.strokeStyle = isMajor ? "#38bdf8" : (isMedium ? "rgba(56, 189, 248, 0.6)" : "rgba(56, 189, 248, 0.25)");
-            ctx.lineWidth = isMajor ? 2.5 : 1;
+            ctx.lineWidth = isMajor ? 2 : 1;
             ctx.beginPath();
             ctx.moveTo(Math.cos(rot) * r1, Math.sin(rot) * r1);
             ctx.lineTo(Math.cos(rot) * r2, Math.sin(rot) * r2);
@@ -825,7 +821,7 @@ function initArcReactorCanvas() {
         ctx.strokeStyle = "rgba(56, 189, 248, 0.45)";
         ctx.lineWidth = 1.5;
         ctx.beginPath();
-        ctx.arc(0, 0, 142, 0, Math.PI * 1.6);
+        ctx.arc(0, 0, 126, 0, Math.PI * 1.6);
         ctx.stroke();
         ctx.restore();
 
@@ -833,14 +829,14 @@ function initArcReactorCanvas() {
         if (isSpeaking || isVoiceActive) {
             ctx.save();
             ctx.translate(cx, cy);
-            const numBars = 72;
-            const radius = 125;
+            const numBars = 64;
+            const radius = 110;
 
             for (let i = 0; i < numBars; i++) {
                 const barAngle = (i / numBars) * Math.PI * 2 + angle * 0.5;
                 const dynamicHeight = isSpeaking 
-                    ? (6 + Math.random() * 26) 
-                    : (3 + Math.sin(angle * 4 + i) * 8);
+                    ? (5 + Math.random() * 22) 
+                    : (2 + Math.sin(angle * 4 + i) * 6);
 
                 const x1 = Math.cos(barAngle) * radius;
                 const y1 = Math.sin(barAngle) * radius;
@@ -848,7 +844,7 @@ function initArcReactorCanvas() {
                 const y2 = Math.sin(barAngle) * (radius + dynamicHeight);
 
                 ctx.strokeStyle = isSpeaking ? "#10b981" : "rgba(56, 189, 248, 0.85)";
-                ctx.lineWidth = 2;
+                ctx.lineWidth = 1.5;
                 ctx.beginPath();
                 ctx.moveTo(x1, y1);
                 ctx.lineTo(x2, y2);
