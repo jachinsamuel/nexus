@@ -53,26 +53,51 @@ body {
     -webkit-font-smoothing: antialiased;
 }
 
-/* Subtle Backdrop Scanlines & Vignette */
+/* ==========================================================================
+   TACTICAL AEROSPACE BACKGROUND & HOLOGRAPHIC GRID
+   ========================================================================== */
+.hud-bg-canvas {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.hud-grid-overlay {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1;
+    background-image: 
+        /* Primary fine 40px grid */
+        linear-gradient(rgba(56, 189, 248, 0.045) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(56, 189, 248, 0.045) 1px, transparent 1px),
+        /* Major 200px tactical division grid */
+        linear-gradient(rgba(56, 189, 248, 0.09) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(56, 189, 248, 0.09) 1px, transparent 1px),
+        /* Radial illumination from Arc Reactor center */
+        radial-gradient(circle at 50% 46%, rgba(14, 165, 233, 0.16) 0%, rgba(2, 132, 199, 0.05) 35%, transparent 68%);
+    background-size: 40px 40px, 40px 40px, 200px 200px, 200px 200px, 100% 100%;
+}
+
 .hud-scanlines {
     position: fixed;
     inset: 0;
-    background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.18) 50%);
+    background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.22) 50%);
     background-size: 100% 3px;
     pointer-events: none;
     z-index: 99;
-    opacity: 0.4;
+    opacity: 0.45;
 }
 
 .hud-vignette {
     position: fixed;
     inset: 0;
-    background: radial-gradient(circle at center, transparent 50%, rgba(2, 6, 18, 0.95) 100%),
-                linear-gradient(rgba(56, 189, 248, 0.015) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(56, 189, 248, 0.015) 1px, transparent 1px);
-    background-size: 100% 100%, 36px 36px, 36px 36px;
+    background: radial-gradient(circle at center, transparent 40%, rgba(2, 6, 18, 0.92) 100%);
     pointer-events: none;
-    z-index: 1;
+    z-index: 2;
 }
 
 .hud-viewport {
@@ -81,7 +106,7 @@ body {
     height: 100vh;
     width: 100vw;
     position: relative;
-    z-index: 2;
+    z-index: 10;
 }
 
 /* ==========================================================================
@@ -100,46 +125,6 @@ body {
 }
 
 .topbar-left {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-
-.arc-indicator-beacon {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: var(--cyan-core);
-    box-shadow: 0 0 10px var(--cyan-core);
-    animation: beaconPulse 2.2s infinite ease-in-out;
-}
-
-.topbar-status-tag {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    background: rgba(16, 185, 129, 0.08);
-    border: 1px solid rgba(16, 185, 129, 0.25);
-    padding: 3px 8px;
-    border-radius: 12px;
-}
-
-.status-dot {
-    width: 5px;
-    height: 5px;
-    border-radius: 50%;
-    background: var(--green-core);
-}
-
-.status-text {
-    font-family: var(--font-mono);
-    font-size: 0.62rem;
-    font-weight: 700;
-    letter-spacing: 1px;
-    color: var(--green-core);
-}
-
-.topbar-center {
     display: flex;
     align-items: center;
 }
@@ -236,49 +221,55 @@ body {
     overflow-x: hidden;
 }
 
-/* Arc Reactor Interactive Core */
+/* ==========================================================================
+   2. AUTHENTIC STARK INDUSTRIES ARC REACTOR (10-COIL CORE)
+   ========================================================================== */
 .arc-reactor-interactive {
     position: relative;
-    width: 380px;
-    height: 380px;
+    width: 440px;
+    height: 440px;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
     transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-    margin-bottom: 12px;
+    margin-bottom: 14px;
 }
 
 .arc-reactor-interactive:hover {
-    transform: scale(1.02);
+    transform: scale(1.025);
 }
 
-.arc-ring-outer {
+/* Layer 1: Brushed Titanium Outer Bezel */
+.arc-bezel-outer {
     position: absolute;
-    inset: 4px;
+    inset: 0px;
     border-radius: 50%;
-    border: 1.5px dashed rgba(56, 189, 248, 0.25);
-    animation: rotateClockwise 35s linear infinite;
+    border: 2px solid rgba(56, 189, 248, 0.25);
+    background: radial-gradient(circle, transparent 72%, rgba(15, 23, 42, 0.6) 88%, rgba(8, 14, 28, 0.9) 100%);
+    box-shadow: 
+        0 0 25px rgba(0, 0, 0, 0.8),
+        inset 0 0 15px rgba(0, 0, 0, 0.9);
     pointer-events: none;
 }
 
+/* Layer 2: Ambient Core Glow */
 .arc-ring-halo {
     position: absolute;
-    width: 310px;
-    height: 310px;
+    width: 380px;
+    height: 380px;
     border-radius: 50%;
-    border: 2px solid var(--cyan-core);
-    box-shadow: 
-        0 0 20px var(--cyan-glow),
-        inset 0 0 20px var(--cyan-glow);
-    animation: haloPulse 3s ease-in-out infinite alternate;
+    background: radial-gradient(circle, rgba(56, 189, 248, 0.1) 0%, rgba(56, 189, 248, 0.02) 65%, transparent 80%);
+    box-shadow: 0 0 40px rgba(56, 189, 248, 0.15);
+    animation: haloPulse 3.5s ease-in-out infinite alternate;
     pointer-events: none;
+    z-index: 1;
 }
 
 .arc-canvas-box {
     position: relative;
-    width: 310px;
-    height: 310px;
+    width: 440px;
+    height: 440px;
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -291,45 +282,67 @@ body {
     width: 100%;
     height: 100%;
     pointer-events: none;
+    z-index: 3;
 }
 
-.arc-obsidian-center {
+/* Layer 3: Central Energy Core Assembly */
+.arc-center-assembly {
     position: relative;
-    width: 210px;
-    height: 210px;
+    width: 150px;
+    height: 150px;
     border-radius: 50%;
-    background: radial-gradient(circle, rgba(10, 16, 32, 0.98) 0%, rgba(4, 8, 18, 1) 100%);
-    border: 1.5px solid rgba(56, 189, 248, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 5;
+    pointer-events: none;
+}
+
+.arc-core-lens {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(14, 26, 52, 0.95) 0%, rgba(6, 11, 24, 0.96) 70%, rgba(2, 6, 16, 1) 100%);
+    border: 2px solid rgba(56, 189, 248, 0.7);
     box-shadow: 
-        0 0 16px rgba(56, 189, 248, 0.25),
-        inset 0 0 20px rgba(56, 189, 248, 0.2);
+        0 0 20px rgba(56, 189, 248, 0.35),
+        inset 0 0 20px rgba(56, 189, 248, 0.3);
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    pointer-events: none;
-    z-index: 5;
+    position: relative;
 }
 
 .arc-brand-text {
     font-family: var(--font-heading);
-    font-size: 1.5rem;
+    font-size: 1.4rem;
     font-weight: 700;
-    letter-spacing: 10px;
+    letter-spacing: 8px;
     color: #ffffff;
     text-shadow: 
         0 0 10px var(--cyan-core),
         0 0 20px var(--cyan-glow);
 }
 
-.arc-core-pulse {
-    width: 26px;
-    height: 2px;
+.arc-core-filaments {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: 5px;
+}
+
+.core-dot {
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
     background: var(--cyan-core);
     box-shadow: 0 0 6px var(--cyan-core);
-    margin-top: 4px;
-    animation: coreFilament 2s infinite alternate;
+    animation: beaconPulse 1.8s infinite ease-in-out;
 }
+
+.core-dot.dot-2 { animation-delay: 0.3s; }
+.core-dot.dot-3 { animation-delay: 0.6s; }
 
 /* Voice Status & Subtitle */
 .voice-status-group {

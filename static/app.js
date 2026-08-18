@@ -23,6 +23,7 @@ function initStarkHUD() {
     setupKeyboardAndMouseListeners();
     loadSavedEngineConfig();
     initSpeechRecognition();
+    initBackgroundCanvas();
     initArcReactorCanvas();
     startUptimeTimer();
 
@@ -772,7 +773,7 @@ function loadSavedEngineConfig() {
 }
 
 /* ==========================================================================
-   11. MULTI-LAYER ARC REACTOR CANVAS ENGINE (60 FPS)
+   11. MULTI-LAYER STARK ARC REACTOR CANVAS ENGINE (60 FPS)
    ========================================================================== */
 function initArcReactorCanvas() {
     const canvas = document.getElementById("arc-canvas");
@@ -780,33 +781,127 @@ function initArcReactorCanvas() {
     const ctx = canvas.getContext("2d");
 
     const dpi = window.devicePixelRatio || 2;
-    canvas.width = 400 * dpi;
-    canvas.height = 400 * dpi;
+    canvas.width = 440 * dpi;
+    canvas.height = 440 * dpi;
 
     let angle = 0;
 
     function render() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.save();
-        ctx.scale(dpi, dpi);
+        // Reset matrix to avoid compounding scale bugs
+        ctx.setTransform(dpi, 0, 0, dpi, 0, 0);
+        ctx.clearRect(0, 0, 440, 440);
 
-        const cx = 200;
-        const cy = 200;
+        const cx = 220;
+        const cy = 220;
 
-        // 1. Counter-Rotating Outer Calibration Ticks
+        // 1. Outer Turbine Calibration Ring (Rotating Clockwise)
         ctx.save();
         ctx.translate(cx, cy);
-        ctx.rotate(angle * 0.25);
+        ctx.rotate(angle * 0.15);
+        
+        // Outer boundary circle
+        ctx.strokeStyle = "rgba(56, 189, 248, 0.25)";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(0, 0, 208, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // 60 Azimuth Ticks
         for (let i = 0; i < 60; i++) {
             const rot = (i / 60) * Math.PI * 2;
-            const isMajor = i % 15 === 0;
-            const isMedium = i % 5 === 0;
-            const len = isMajor ? 10 : (isMedium ? 6 : 3);
-            const r1 = 152;
+            const isMajor = i % 6 === 0;
+            const isMedium = i % 2 === 0;
+            const len = isMajor ? 12 : (isMedium ? 6 : 3);
+            const r1 = 206;
             const r2 = r1 - len;
 
-            ctx.strokeStyle = isMajor ? "#38bdf8" : (isMedium ? "rgba(56, 189, 248, 0.6)" : "rgba(56, 189, 248, 0.25)");
-            ctx.lineWidth = isMajor ? 2 : 1;
+            ctx.strokeStyle = isMajor ? "#38bdf8" : (isMedium ? "rgba(56, 189, 248, 0.6)" : "rgba(56, 189, 248, 0.2)");
+            ctx.lineWidth = isMajor ? 2.5 : 1;
+            ctx.beginPath();
+            ctx.moveTo(Math.cos(rot) * r1, Math.sin(rot) * r1);
+            ctx.lineTo(Math.cos(rot) * r2, Math.sin(rot) * r2);
+            ctx.stroke();
+
+            // Outer node dots at major angles
+            if (isMajor) {
+                ctx.fillStyle = "#38bdf8";
+                ctx.beginPath();
+                ctx.arc(Math.cos(rot) * 192, Math.sin(rot) * 192, 2, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+        ctx.restore();
+
+        // 2. Ten Authentic Electromagnetic Copper Coil Transformer Blocks
+        const numCoils = 10;
+        const rOuter = 182;
+        const rInner = 120;
+        const arcHalfWidth = 0.22; // ~25.2 degrees span
+
+        for (let i = 0; i < numCoils; i++) {
+            const coilAngle = (i / numCoils) * Math.PI * 2;
+            ctx.save();
+            ctx.translate(cx, cy);
+            ctx.rotate(coilAngle);
+
+            // Transformer Core Block Fill
+            ctx.beginPath();
+            ctx.arc(0, 0, rOuter, -arcHalfWidth, arcHalfWidth);
+            ctx.arc(0, 0, rInner, arcHalfWidth, -arcHalfWidth, true);
+            ctx.closePath();
+            ctx.fillStyle = "rgba(12, 20, 40, 0.95)";
+            ctx.fill();
+            ctx.strokeStyle = "rgba(56, 189, 248, 0.6)";
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+
+            // Copper Coil Windings (Concentric Gold/Amber Filament Lines)
+            const numWindings = 5;
+            ctx.strokeStyle = "rgba(245, 158, 11, 0.85)";
+            ctx.lineWidth = 1.4;
+            for (let w = 0; w < numWindings; w++) {
+                const wAngle = -arcHalfWidth + (w + 1) * ((arcHalfWidth * 2) / (numWindings + 1));
+                ctx.beginPath();
+                ctx.moveTo(Math.cos(wAngle) * (rInner + 3), Math.sin(wAngle) * (rInner + 3));
+                ctx.lineTo(Math.cos(wAngle) * (rOuter - 3), Math.sin(wAngle) * (rOuter - 3));
+                ctx.stroke();
+            }
+
+            // Central Luminous Power Conduit Line
+            const pulseGlow = Math.sin(angle * 3 + i) * 0.35 + 0.65;
+            ctx.strokeStyle = `rgba(56, 189, 248, ${pulseGlow})`;
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(rInner + 2, 0);
+            ctx.lineTo(rOuter - 2, 0);
+            ctx.stroke();
+
+            // Central Core Specular Dot
+            ctx.fillStyle = "#ffffff";
+            ctx.beginPath();
+            ctx.arc((rInner + rOuter) / 2, 0, 2.5, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Outer Mechanical Retention Clamp Bracket (Titanium Anchor)
+            ctx.strokeStyle = "rgba(148, 163, 184, 0.8)";
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(0, 0, rOuter + 2, -arcHalfWidth * 0.45, arcHalfWidth * 0.45);
+            ctx.stroke();
+
+            ctx.restore();
+        }
+
+        // 3. Counter-Rotating Inner Turbine Ring (Rotating Counter-Clockwise)
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(-angle * 0.35);
+        for (let j = 0; j < 30; j++) {
+            const rot = (j / 30) * Math.PI * 2;
+            const r1 = 114;
+            const r2 = 106;
+            ctx.strokeStyle = "rgba(56, 189, 248, 0.6)";
+            ctx.lineWidth = 1.5;
             ctx.beginPath();
             ctx.moveTo(Math.cos(rot) * r1, Math.sin(rot) * r1);
             ctx.lineTo(Math.cos(rot) * r2, Math.sin(rot) * r2);
@@ -814,37 +909,26 @@ function initArcReactorCanvas() {
         }
         ctx.restore();
 
-        // 2. Counter-Rotating Inner Filament Arc
-        ctx.save();
-        ctx.translate(cx, cy);
-        ctx.rotate(-angle * 0.4);
-        ctx.strokeStyle = "rgba(56, 189, 248, 0.45)";
-        ctx.lineWidth = 1.5;
-        ctx.beginPath();
-        ctx.arc(0, 0, 126, 0, Math.PI * 1.6);
-        ctx.stroke();
-        ctx.restore();
-
-        // 3. Audio Frequency Oscilloscope Waves (Reacts when Speaking or Listening)
+        // 4. Audio Frequency Oscilloscope Plasma Waves
         if (isSpeaking || isVoiceActive) {
             ctx.save();
             ctx.translate(cx, cy);
-            const numBars = 64;
-            const radius = 110;
+            const numBars = 48;
+            const radius = 96;
 
             for (let i = 0; i < numBars; i++) {
-                const barAngle = (i / numBars) * Math.PI * 2 + angle * 0.5;
+                const barAngle = (i / numBars) * Math.PI * 2 + angle * 0.4;
                 const dynamicHeight = isSpeaking 
-                    ? (5 + Math.random() * 22) 
-                    : (2 + Math.sin(angle * 4 + i) * 6);
+                    ? (4 + Math.random() * 22) 
+                    : (2 + Math.sin(angle * 4 + i) * 7);
 
                 const x1 = Math.cos(barAngle) * radius;
                 const y1 = Math.sin(barAngle) * radius;
                 const x2 = Math.cos(barAngle) * (radius + dynamicHeight);
                 const y2 = Math.sin(barAngle) * (radius + dynamicHeight);
 
-                ctx.strokeStyle = isSpeaking ? "#10b981" : "rgba(56, 189, 248, 0.85)";
-                ctx.lineWidth = 1.5;
+                ctx.strokeStyle = isSpeaking ? "#10b981" : "rgba(56, 189, 248, 0.9)";
+                ctx.lineWidth = 1.8;
                 ctx.beginPath();
                 ctx.moveTo(x1, y1);
                 ctx.lineTo(x2, y2);
@@ -853,9 +937,145 @@ function initArcReactorCanvas() {
             ctx.restore();
         }
 
+        // 5. Inner Concentric Power Ring & Radial Tri-Spoke Crystal Lines
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.strokeStyle = "rgba(56, 189, 248, 0.75)";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(0, 0, 92, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // 3 Radial Spoke Power Lines (120 deg apart)
+        for (let s = 0; s < 3; s++) {
+            const spokeAngle = (s / 3) * Math.PI * 2 + angle * 0.1;
+            ctx.strokeStyle = "rgba(56, 189, 248, 0.5)";
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(Math.cos(spokeAngle) * 40, Math.sin(spokeAngle) * 40);
+            ctx.lineTo(Math.cos(spokeAngle) * 90, Math.sin(spokeAngle) * 90);
+            ctx.stroke();
+        }
+        ctx.restore();
+
         angle += 0.015;
         requestAnimationFrame(render);
     }
 
     render();
+}
+
+/* ==========================================================================
+   12. TACTICAL BACKGROUND CANVAS & PARTICLE ENGINE (60 FPS)
+   ========================================================================== */
+function initBackgroundCanvas() {
+    const canvas = document.getElementById("bg-canvas");
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+
+    let width = (canvas.width = window.innerWidth);
+    let height = (canvas.height = window.innerHeight);
+
+    window.addEventListener("resize", () => {
+        width = canvas.width = window.innerWidth;
+        height = canvas.height = window.innerHeight;
+    });
+
+    // 40 Floating Ambient Tactical Particles
+    const particles = [];
+    const numParticles = 40;
+    for (let i = 0; i < numParticles; i++) {
+        particles.push({
+            x: Math.random() * width,
+            y: Math.random() * height,
+            vx: (Math.random() - 0.5) * 0.35,
+            vy: (Math.random() - 0.5) * 0.35,
+            size: Math.random() * 2 + 1,
+            alpha: Math.random() * 0.45 + 0.15
+        });
+    }
+
+    let bgAngle = 0;
+
+    function renderBg() {
+        ctx.clearRect(0, 0, width, height);
+
+        const cx = width / 2;
+        const cy = height / 2;
+
+        // 1. Slow-Rotating Tactical Sonar Rings
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(bgAngle * 0.05);
+
+        // Ring 1 (Radius 360)
+        ctx.strokeStyle = "rgba(56, 189, 248, 0.08)";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(0, 0, 360, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Ring 2 (Radius 520) with dashed intervals
+        ctx.strokeStyle = "rgba(56, 189, 248, 0.05)";
+        ctx.setLineDash([8, 12]);
+        ctx.beginPath();
+        ctx.arc(0, 0, 520, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Ring 3 (Radius 680) with 8 Azimuth Compass Crosshair Notches
+        ctx.strokeStyle = "rgba(56, 189, 248, 0.07)";
+        for (let i = 0; i < 8; i++) {
+            const rot = (i / 8) * Math.PI * 2;
+            const r1 = 680;
+            const r2 = 665;
+            ctx.beginPath();
+            ctx.moveTo(Math.cos(rot) * r1, Math.sin(rot) * r1);
+            ctx.lineTo(Math.cos(rot) * r2, Math.sin(rot) * r2);
+            ctx.stroke();
+        }
+
+        ctx.restore();
+
+        // 2. Blueprint Grid Intersect Crosshairs (+)
+        const gridStep = 200;
+        const startX = (width % gridStep) / 2;
+        const startY = (height % gridStep) / 2;
+
+        ctx.strokeStyle = "rgba(56, 189, 248, 0.18)";
+        ctx.lineWidth = 1;
+
+        for (let x = startX; x < width; x += gridStep) {
+            for (let y = startY; y < height; y += gridStep) {
+                const arm = 4;
+                ctx.beginPath();
+                ctx.moveTo(x - arm, y);
+                ctx.lineTo(x + arm, y);
+                ctx.moveTo(x, y - arm);
+                ctx.lineTo(x, y + arm);
+                ctx.stroke();
+            }
+        }
+
+        // 3. Floating Ambient Tactical Energy Particles
+        for (let p of particles) {
+            p.x += p.vx;
+            p.y += p.vy;
+
+            if (p.x < 0) p.x = width;
+            if (p.x > width) p.x = 0;
+            if (p.y < 0) p.y = height;
+            if (p.y > height) p.y = 0;
+
+            ctx.fillStyle = `rgba(56, 189, 248, ${p.alpha})`;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        bgAngle += 0.01;
+        requestAnimationFrame(renderBg);
+    }
+
+    renderBg();
 }

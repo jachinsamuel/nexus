@@ -11,22 +11,16 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <!-- Subtle Ambient Backdrop -->
+    <!-- Tactical Aerospace Background Canvas & Grid Overlay -->
+    <canvas id="bg-canvas" class="hud-bg-canvas"></canvas>
+    <div class="hud-grid-overlay"></div>
     <div class="hud-scanlines"></div>
     <div class="hud-vignette"></div>
 
     <div class="hud-viewport">
-        <!-- 1. Minimal Topbar (Clean, No brand titles or messy subtitle text) -->
+        <!-- 1. Minimal Topbar -->
         <header class="stark-topbar">
             <div class="topbar-left">
-                <div class="arc-indicator-beacon" id="beacon-indicator"></div>
-                <div class="topbar-status-tag">
-                    <span class="status-dot"></span>
-                    <span class="status-text">ONLINE</span>
-                </div>
-            </div>
-
-            <div class="topbar-center">
                 <div class="telemetry-compact" id="telemetry-compact">
                     <span class="telem-item" id="hdr-cpu">CPU --%</span>
                     <span class="telem-sep">/</span>
@@ -58,13 +52,19 @@
         <main class="reactor-stage">
             <!-- Arc Reactor Interactive Container -->
             <div class="arc-reactor-interactive" id="arc-reactor-core" title="Click or Press Spacebar for Voice Mode">
-                <div class="arc-ring-outer"></div>
+                <div class="arc-bezel-outer"></div>
                 <div class="arc-ring-halo"></div>
                 <div class="arc-canvas-box">
-                    <canvas id="arc-canvas" width="400" height="400"></canvas>
-                    <div class="arc-obsidian-center">
-                        <span class="arc-brand-text">NEXUS</span>
-                        <span class="arc-core-pulse"></span>
+                    <canvas id="arc-canvas" width="440" height="440"></canvas>
+                    <div class="arc-center-assembly">
+                        <div class="arc-core-lens">
+                            <span class="arc-brand-text">NEXUS</span>
+                            <div class="arc-core-filaments">
+                                <span class="core-dot dot-1"></span>
+                                <span class="core-dot dot-2"></span>
+                                <span class="core-dot dot-3"></span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
