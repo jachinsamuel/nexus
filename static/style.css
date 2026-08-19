@@ -53,53 +53,6 @@ body {
     -webkit-font-smoothing: antialiased;
 }
 
-/* ==========================================================================
-   TACTICAL AEROSPACE BACKGROUND & HOLOGRAPHIC GRID
-   ========================================================================== */
-.hud-bg-canvas {
-    position: fixed;
-    inset: 0;
-    width: 100vw;
-    height: 100vh;
-    pointer-events: none;
-    z-index: 0;
-}
-
-.hud-grid-overlay {
-    position: fixed;
-    inset: 0;
-    pointer-events: none;
-    z-index: 1;
-    background-image: 
-        /* Primary fine 40px grid */
-        linear-gradient(rgba(56, 189, 248, 0.045) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(56, 189, 248, 0.045) 1px, transparent 1px),
-        /* Major 200px tactical division grid */
-        linear-gradient(rgba(56, 189, 248, 0.09) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(56, 189, 248, 0.09) 1px, transparent 1px),
-        /* Radial illumination from Arc Reactor center */
-        radial-gradient(circle at 50% 46%, rgba(14, 165, 233, 0.16) 0%, rgba(2, 132, 199, 0.05) 35%, transparent 68%);
-    background-size: 40px 40px, 40px 40px, 200px 200px, 200px 200px, 100% 100%;
-}
-
-.hud-scanlines {
-    position: fixed;
-    inset: 0;
-    background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.22) 50%);
-    background-size: 100% 3px;
-    pointer-events: none;
-    z-index: 99;
-    opacity: 0.45;
-}
-
-.hud-vignette {
-    position: fixed;
-    inset: 0;
-    background: radial-gradient(circle at center, transparent 40%, rgba(2, 6, 18, 0.92) 100%);
-    pointer-events: none;
-    z-index: 2;
-}
-
 .hud-viewport {
     display: flex;
     flex-direction: column;
@@ -222,55 +175,52 @@ body {
 }
 
 /* ==========================================================================
-   2. AUTHENTIC STARK INDUSTRIES ARC REACTOR (10-COIL CORE)
+   2. MINIMALIST LUMINOUS VOICE CORE (SLEEK, UNCLUTTERED)
    ========================================================================== */
-.arc-reactor-interactive {
+.voice-core-container {
     position: relative;
-    width: 440px;
-    height: 440px;
+    width: 260px;
+    height: 260px;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
     transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-    margin-bottom: 14px;
+    margin-bottom: 20px;
 }
 
-.arc-reactor-interactive:hover {
-    transform: scale(1.025);
+.voice-core-container:hover {
+    transform: scale(1.04);
 }
 
-/* Layer 1: Brushed Titanium Outer Bezel */
-.arc-bezel-outer {
+.core-glow-aura {
     position: absolute;
-    inset: 0px;
+    inset: -20px;
     border-radius: 50%;
-    border: 2px solid rgba(56, 189, 248, 0.25);
-    background: radial-gradient(circle, transparent 72%, rgba(15, 23, 42, 0.6) 88%, rgba(8, 14, 28, 0.9) 100%);
-    box-shadow: 
-        0 0 25px rgba(0, 0, 0, 0.8),
-        inset 0 0 15px rgba(0, 0, 0, 0.9);
+    background: radial-gradient(circle, rgba(56, 189, 248, 0.16) 0%, rgba(56, 189, 248, 0.03) 55%, transparent 75%);
+    animation: haloPulse 3s ease-in-out infinite alternate;
     pointer-events: none;
 }
 
-/* Layer 2: Ambient Core Glow */
-.arc-ring-halo {
+.core-outer-ring {
     position: absolute;
-    width: 380px;
-    height: 380px;
+    inset: 0;
     border-radius: 50%;
-    background: radial-gradient(circle, rgba(56, 189, 248, 0.1) 0%, rgba(56, 189, 248, 0.02) 65%, transparent 80%);
-    box-shadow: 0 0 40px rgba(56, 189, 248, 0.15);
-    animation: haloPulse 3.5s ease-in-out infinite alternate;
+    border: 1.5px solid rgba(56, 189, 248, 0.35);
+    box-shadow: 0 0 20px rgba(56, 189, 248, 0.2);
     pointer-events: none;
-    z-index: 1;
 }
 
-.arc-canvas-box {
+.core-orb {
     position: relative;
-    width: 440px;
-    height: 440px;
+    width: 220px;
+    height: 220px;
     border-radius: 50%;
+    background: radial-gradient(circle, rgba(14, 26, 52, 0.95) 0%, rgba(6, 12, 28, 0.98) 70%, rgba(3, 7, 18, 1) 100%);
+    border: 1.5px solid rgba(56, 189, 248, 0.6);
+    box-shadow: 
+        0 0 25px rgba(56, 189, 248, 0.25),
+        inset 0 0 20px rgba(56, 189, 248, 0.2);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -282,67 +232,36 @@ body {
     width: 100%;
     height: 100%;
     pointer-events: none;
-    z-index: 3;
+    z-index: 2;
 }
 
-/* Layer 3: Central Energy Core Assembly */
-.arc-center-assembly {
+.core-center-label {
     position: relative;
-    width: 150px;
-    height: 150px;
-    border-radius: 50%;
     display: flex;
+    flex-direction: column;
     align-items: center;
-    justify-content: center;
+    gap: 6px;
     z-index: 5;
     pointer-events: none;
 }
 
-.arc-core-lens {
-    width: 100%;
-    height: 100%;
-    border-radius: 50%;
-    background: radial-gradient(circle, rgba(14, 26, 52, 0.95) 0%, rgba(6, 11, 24, 0.96) 70%, rgba(2, 6, 16, 1) 100%);
-    border: 2px solid rgba(56, 189, 248, 0.7);
-    box-shadow: 
-        0 0 20px rgba(56, 189, 248, 0.35),
-        inset 0 0 20px rgba(56, 189, 248, 0.3);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    position: relative;
-}
-
-.arc-brand-text {
+.core-brand {
     font-family: var(--font-heading);
-    font-size: 1.4rem;
+    font-size: 1.25rem;
     font-weight: 700;
-    letter-spacing: 8px;
+    letter-spacing: 6px;
     color: #ffffff;
-    text-shadow: 
-        0 0 10px var(--cyan-core),
-        0 0 20px var(--cyan-glow);
+    text-shadow: 0 0 12px var(--cyan-core);
 }
 
-.arc-core-filaments {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    margin-top: 5px;
-}
-
-.core-dot {
-    width: 4px;
-    height: 4px;
+.core-pulse-dot {
+    width: 5px;
+    height: 5px;
     border-radius: 50%;
     background: var(--cyan-core);
-    box-shadow: 0 0 6px var(--cyan-core);
-    animation: beaconPulse 1.8s infinite ease-in-out;
+    box-shadow: 0 0 8px var(--cyan-core);
+    animation: beaconPulse 2s infinite ease-in-out;
 }
-
-.core-dot.dot-2 { animation-delay: 0.3s; }
-.core-dot.dot-3 { animation-delay: 0.6s; }
 
 /* Voice Status & Subtitle */
 .voice-status-group {
@@ -468,51 +387,11 @@ body {
     word-break: break-word;
 }
 
-/* Tactical Quick Command Chips */
-.tactical-chips-dock {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    max-width: 680px;
-    margin-top: 2px;
-}
-
-.chip-btn {
-    background: rgba(15, 23, 42, 0.7);
-    border: 1px solid var(--border-subtle);
-    color: var(--text-dim);
-    font-family: var(--font-mono);
-    font-size: 0.64rem;
-    font-weight: 600;
-    letter-spacing: 0.5px;
-    padding: 5px 10px;
-    border-radius: 4px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.chip-icon {
-    color: var(--cyan-core);
-}
-
-.chip-btn:hover {
-    background: rgba(56, 189, 248, 0.12);
-    border-color: var(--cyan-core);
-    color: var(--text-pure);
-    box-shadow: 0 0 12px rgba(56, 189, 248, 0.25);
-    transform: translateY(-1px);
-}
-
 /* Quick Typing Capsule */
 .quick-input-capsule {
-    width: 640px;
-    max-width: 95%;
-    margin-top: 12px;
+    width: 580px;
+    max-width: 90%;
+    margin-top: 24px;
 }
 
 .capsule-form {
@@ -946,6 +825,196 @@ body {
 .sec-scan-btn:hover {
     background: var(--cyan-core);
     color: #030712;
+}
+
+/* Multi-Agent Crew Styles (CrewAI / AutoGPT) */
+.sec-badge {
+    font-family: var(--font-mono);
+    font-size: 0.52rem;
+    color: var(--cyan-core);
+    background: rgba(56, 189, 248, 0.12);
+    border: 1px solid rgba(56, 189, 248, 0.25);
+    padding: 1px 5px;
+    border-radius: 3px;
+}
+
+.agent-crew-box, .rag-vault-box, .gen-studio-box {
+    background: var(--bg-card);
+    border: 1px solid var(--border-card);
+    border-radius: 6px;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.agent-input-row, .rag-search-row, .gen-input-row {
+    display: flex;
+    gap: 6px;
+}
+
+.hud-action-btn, .rag-btn {
+    background: rgba(56, 189, 248, 0.12);
+    border: 1px solid var(--border-cyan);
+    color: var(--cyan-core);
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    font-weight: 700;
+    padding: 4px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    transition: all 0.2s ease;
+}
+
+.hud-action-btn:hover, .rag-btn:hover {
+    background: var(--cyan-core);
+    color: #030712;
+}
+
+.agent-steps-stream {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: 4px;
+}
+
+.agent-step-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(10, 16, 32, 0.8);
+    border: 1px solid rgba(56, 189, 248, 0.15);
+    border-radius: 4px;
+    padding: 4px 6px;
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+}
+
+.step-icon {
+    background: rgba(56, 189, 248, 0.2);
+    color: var(--cyan-core);
+    font-weight: 700;
+    padding: 1px 4px;
+    border-radius: 2px;
+    font-size: 0.54rem;
+}
+
+.step-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.step-name {
+    font-weight: 700;
+    color: var(--text-bright);
+}
+
+.step-desc {
+    color: var(--text-dim);
+    font-size: 0.54rem;
+}
+
+.agent-result-box {
+    background: rgba(8, 14, 28, 0.95);
+    border: 1px solid var(--border-cyan);
+    border-radius: 4px;
+    padding: 8px;
+    font-family: var(--font-heading);
+    font-size: 0.74rem;
+    line-height: 1.45;
+    color: var(--text-bright);
+    max-height: 180px;
+    overflow-y: auto;
+}
+
+/* RAG Styles */
+.rag-upload-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.rag-upload-status {
+    font-family: var(--font-mono);
+    font-size: 0.58rem;
+    color: var(--text-dim);
+}
+
+.rag-results-stream {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-height: 120px;
+    overflow-y: auto;
+}
+
+.rag-chunk-card {
+    background: rgba(10, 16, 32, 0.9);
+    border: 1px solid rgba(56, 189, 248, 0.2);
+    border-left: 2px solid var(--cyan-core);
+    padding: 4px 6px;
+    border-radius: 3px;
+    font-family: var(--font-mono);
+    font-size: 0.58rem;
+    color: var(--text-dim);
+}
+
+.rag-chunk-title {
+    color: var(--cyan-core);
+    font-weight: 700;
+    margin-bottom: 2px;
+}
+
+/* Local AI Sentinel Engine Grid */
+.engine-probe-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4px;
+}
+
+.engine-pill {
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid var(--border-card);
+    border-radius: 4px;
+    padding: 4px 6px;
+    font-family: var(--font-mono);
+    font-size: 0.58rem;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    color: var(--text-dim);
+}
+
+.engine-pill.online {
+    border-color: rgba(16, 185, 129, 0.35);
+    color: var(--green-core);
+}
+
+.engine-dot {
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: var(--text-muted);
+}
+
+.engine-pill.online .engine-dot {
+    background: var(--green-core);
+    box-shadow: 0 0 6px var(--green-core);
+}
+
+.gen-preview-box {
+    margin-top: 4px;
+    text-align: center;
+}
+
+.gen-preview-img {
+    max-width: 100%;
+    border-radius: 4px;
+    border: 1px solid var(--border-cyan);
 }
 
 .activity-log-terminal {

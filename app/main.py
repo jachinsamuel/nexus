@@ -36,6 +36,10 @@ from app.nexus_engine import (
     manage_user_notes,
     find_workspace_file,
     get_top_resource_processes,
+    MultiAgentOrchestrator,
+    detect_ai_providers,
+    perform_hybrid_rag_search,
+    generate_image_agent,
     NEXUS_SYSTEM_PROMPT
 )
 
@@ -373,7 +377,60 @@ async def chat_stream(request: ChatRequest, background_tasks: BackgroundTasks):
             
         yield "event: done\ndata: {}\n\n"
 
-    return StreamingResponse(event_generator(), media_type="text/event-stream")
+# Multi-Agent Orchestration Endpoint (CrewAI / AutoGPT / LangChain)
+@app.post("/api/agents/orchestrate")
+async def run_multi_agent_mission(data: Dict[str, Any]):
+    mission = data.get("mission") or data.get("query") or "Analyze system and summarize operational status"
+    provider = data.get("provider", "gemini")
+    api_key = data.get("apiKey")
+    ollama_url = data.get("ollamaUrl", "http://localhost:11434")
+    model = data.get("model")
+
+    orchestrator = MultiAgentOrchestrator(
+        provider=provider,
+        api_key=api_key,
+        ollama_url=ollama_url,
+        model=model
+    )
+    return await orchestrator.execute_mission(mission)
+
+# AI Provider Live Probe & Discovery Endpoint
+@app.get("/api/providers/status")
+async def get_providers_status():
+    return await detect_ai_providers()
+
+# Hybrid RAG Query Endpoint (Vector Cosine + BM25)
+@app.post("/api/rag/query")
+async def query_rag_knowledge(data: Dict[str, Any]):
+    query = data.get("query", "")
+    provider = data.get("provider", "gemini")
+    api_key = data.get("apiKey")
+    ollama_url = data.get("ollamaUrl", "http://localhost:11434")
+    top_k = int(data.get("top_k", 4))
+
+    results = await perform_hybrid_rag_search(
+        query=query,
+        db_instance=db,
+        provider=provider,
+        api_key=api_key,
+        ollama_url=ollama_url,
+        top_k=top_k
+    )
+    return {"query": query, "results": results, "count": len(results)}
+
+# Generative Image Studio Endpoint (ComfyUI / SD WebUI / Pollinations)
+@app.post("/api/generative/image")
+async def generate_image_endpoint(data: Dict[str, Any]):
+    prompt = data.get("prompt", "futuristic holographic core")
+    width = int(data.get("width", 512))
+    height = int(data.get("height", 512))
+    return await generate_image_agent(prompt, width=width, height=height)
+
+# Sandboxed Python Execution Endpoint
+@app.post("/api/automation/execute_python")
+async def execute_python_endpoint(data: Dict[str, str]):
+    code = data.get("code", "")
+    return execute_python_code(code)
 
 # Mount Static UI
 static_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "static"))

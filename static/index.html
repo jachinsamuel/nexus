@@ -11,12 +11,6 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <!-- Tactical Aerospace Background Canvas & Grid Overlay -->
-    <canvas id="bg-canvas" class="hud-bg-canvas"></canvas>
-    <div class="hud-grid-overlay"></div>
-    <div class="hud-scanlines"></div>
-    <div class="hud-vignette"></div>
-
     <div class="hud-viewport">
         <!-- 1. Minimal Topbar -->
         <header class="stark-topbar">
@@ -48,34 +42,28 @@
             </div>
         </header>
 
-        <!-- 2. Clean Center Stage (Spacious, Uncluttered, High-End Focus) -->
+        <!-- 2. Clean Center Stage (Spacious, Uncluttered, Pure Focus) -->
         <main class="reactor-stage">
-            <!-- Arc Reactor Interactive Container -->
-            <div class="arc-reactor-interactive" id="arc-reactor-core" title="Click or Press Spacebar for Voice Mode">
-                <div class="arc-bezel-outer"></div>
-                <div class="arc-ring-halo"></div>
-                <div class="arc-canvas-box">
-                    <canvas id="arc-canvas" width="440" height="440"></canvas>
-                    <div class="arc-center-assembly">
-                        <div class="arc-core-lens">
-                            <span class="arc-brand-text">NEXUS</span>
-                            <div class="arc-core-filaments">
-                                <span class="core-dot dot-1"></span>
-                                <span class="core-dot dot-2"></span>
-                                <span class="core-dot dot-3"></span>
-                            </div>
-                        </div>
+            <!-- Minimalist Sleek Luminous Voice Core -->
+            <div class="voice-core-container" id="arc-reactor-core" title="Click or Press Spacebar to Speak">
+                <div class="core-glow-aura"></div>
+                <div class="core-outer-ring"></div>
+                <div class="core-orb">
+                    <canvas id="arc-canvas" width="260" height="260"></canvas>
+                    <div class="core-center-label">
+                        <span class="core-brand">NEXUS</span>
+                        <div class="core-pulse-dot"></div>
                     </div>
                 </div>
             </div>
 
-            <!-- Tactical Voice State & Subtitle -->
+            <!-- Clean Voice Status & Subtitle -->
             <div class="voice-status-group">
                 <div class="voice-state-badge" id="nexus-state">STANDBY</div>
-                <div class="voice-transcript-hud" id="nexus-transcript">Press Spacebar or Click Arc Reactor to speak</div>
+                <div class="voice-transcript-hud" id="nexus-transcript">Press Spacebar or Click Core to speak</div>
             </div>
 
-            <!-- Floating Holographic Response HUD Card -->
+            <!-- Floating Response Readout Card -->
             <div class="holographic-response-card" id="response-stream-box" style="display: none;">
                 <div class="holo-header">
                     <div class="holo-title-group">
@@ -93,51 +81,11 @@
                 <div class="holo-body custom-scroll" id="stream-text"></div>
             </div>
 
-            <!-- Tactical Quick Command Chips -->
-            <div class="tactical-chips-dock">
-                <button class="chip-btn" onclick="executeQuickIntent('house party protocol')">
-                    <svg class="chip-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-                    <span>HOUSE PARTY</span>
-                </button>
-                <button class="chip-btn" onclick="executeQuickIntent('lockdown protocol')">
-                    <svg class="chip-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                    <span>LOCKDOWN</span>
-                </button>
-                <button class="chip-btn" onclick="executeQuickIntent('explain available protocols')">
-                    <svg class="chip-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                    <span>PROTOCOLS</span>
-                </button>
-                <button class="chip-btn" onclick="executeQuickIntent('latest news briefing')">
-                    <svg class="chip-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8"/><path d="M15 18h-5"/><path d="M10 6h8v4h-8V6Z"/></svg>
-                    <span>NEWS</span>
-                </button>
-                <button class="chip-btn" onclick="executeQuickIntent('storage telemetry')">
-                    <svg class="chip-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="12" x2="2" y2="12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/><line x1="6" y1="16" x2="6.01" y2="16"/><line x1="10" y1="16" x2="10.01" y2="16"/></svg>
-                    <span>STORAGE</span>
-                </button>
-                <button class="chip-btn" onclick="executeQuickIntent('read clipboard')">
-                    <svg class="chip-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
-                    <span>CLIPBOARD</span>
-                </button>
-                <button class="chip-btn" onclick="executeQuickIntent('take screenshot')">
-                    <svg class="chip-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-                    <span>SCREENSHOT</span>
-                </button>
-                <button class="chip-btn" onclick="executeQuickIntent('git status')">
-                    <svg class="chip-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg>
-                    <span>GIT</span>
-                </button>
-                <button class="chip-btn" onclick="executeQuickIntent('what can you do')">
-                    <svg class="chip-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                    <span>ALL FEATURES</span>
-                </button>
-            </div>
-
-            <!-- Quick Typing Capsule (Press / or T) -->
-            <div class="quick-input-capsule" id="quick-input-capsule" style="display: none;">
+            <!-- Clean Typing Capsule -->
+            <div class="quick-input-capsule" id="quick-input-capsule">
                 <form id="cmd-form" class="capsule-form">
-                    <input type="text" id="cmd-input" placeholder="Enter tactical command or query..." autocomplete="off">
-                    <button type="submit" class="capsule-send-btn" title="Send Command">
+                    <input type="text" id="cmd-input" placeholder="Type a message or command for NEXUS..." autocomplete="off">
+                    <button type="submit" class="capsule-send-btn" title="Send">
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
                     </button>
                 </form>
@@ -285,6 +233,88 @@
                     <span class="sec-score" id="sec-score-val">100 / 100</span>
                 </div>
                 <button class="sec-scan-btn" onclick="runWorkspaceSecurityAudit()">RUN SECURITY SCAN</button>
+            </div>
+
+            <!-- Multi-Agent Autonomous Orchestration (CrewAI / AutoGPT) -->
+            <div class="panel-section-divider">
+                <span>MULTI-AGENT AUTONOMOUS CREW</span>
+                <span class="sec-badge">CREW-AI / AUTOGPT</span>
+            </div>
+            <div class="agent-crew-box">
+                <div class="agent-input-row">
+                    <input type="text" id="agent-mission-input" class="clean-input" placeholder="e.g. Research quantum algorithms and build execution plan...">
+                    <button class="hud-action-btn" onclick="dispatchAgentCrew()">DISPATCH</button>
+                </div>
+                <div class="agent-steps-stream" id="agent-steps-stream" style="display: none;">
+                    <div class="agent-step-item" id="agent-step-commander">
+                        <span class="step-icon">01</span>
+                        <div class="step-info">
+                            <span class="step-name">TACTICAL COMMANDER</span>
+                            <span class="step-desc">Decomposing mission & formulation...</span>
+                        </div>
+                    </div>
+                    <div class="agent-step-item" id="agent-step-researcher">
+                        <span class="step-icon">02</span>
+                        <div class="step-info">
+                            <span class="step-name">INTELLIGENCE RESEARCHER</span>
+                            <span class="step-desc">Gathering web & RAG knowledge...</span>
+                        </div>
+                    </div>
+                    <div class="agent-step-item" id="agent-step-engineer">
+                        <span class="step-icon">03</span>
+                        <div class="step-info">
+                            <span class="step-name">CODE & SYSTEMS ENGINEER</span>
+                            <span class="step-desc">Synthesizing solution & automation...</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="agent-result-box" id="agent-result-box" style="display: none;"></div>
+            </div>
+
+            <!-- RAG & Vector Knowledge Vault (RAGFlow / Dify) -->
+            <div class="panel-section-divider">
+                <span>RAG KNOWLEDGE VAULT</span>
+                <span class="sec-badge">HYBRID RAG</span>
+            </div>
+            <div class="rag-vault-box">
+                <div class="rag-upload-row">
+                    <input type="file" id="rag-file-input" style="display: none;" onchange="handleRagFileUpload(this)">
+                    <button class="rag-btn" onclick="document.getElementById('rag-file-input').click()">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                        <span>INDEX DOCUMENT</span>
+                    </button>
+                    <span class="rag-upload-status" id="rag-upload-status">Ready</span>
+                </div>
+                <div class="rag-search-row">
+                    <input type="text" id="rag-query-input" class="clean-input" placeholder="Query indexed documents...">
+                    <button class="rag-btn" onclick="queryRagVault()">SEARCH</button>
+                </div>
+                <div class="rag-results-stream" id="rag-results-stream"></div>
+            </div>
+
+            <!-- Local AI Engine Sentinel (Ollama / llama.cpp / ComfyUI) -->
+            <div class="panel-section-divider">
+                <span>LOCAL AI RUNTIMES</span>
+                <button class="mini-hud-btn" onclick="probeLocalEngines()" title="Probe Local Engines">PROBE</button>
+            </div>
+            <div class="engine-probe-grid" id="engine-probe-grid">
+                <div class="engine-pill" id="probe-ollama"><span class="engine-dot"></span>Ollama</div>
+                <div class="engine-pill" id="probe-llamacpp"><span class="engine-dot"></span>llama.cpp</div>
+                <div class="engine-pill" id="probe-lmstudio"><span class="engine-dot"></span>LM Studio</div>
+                <div class="engine-pill" id="probe-comfyui"><span class="engine-dot"></span>ComfyUI</div>
+                <div class="engine-pill" id="probe-sdwebui"><span class="engine-dot"></span>SD WebUI</div>
+            </div>
+
+            <!-- Generative Visual Studio -->
+            <div class="panel-section-divider">
+                <span>GENERATIVE VISUAL STUDIO</span>
+            </div>
+            <div class="gen-studio-box">
+                <div class="gen-input-row">
+                    <input type="text" id="gen-prompt-input" class="clean-input" placeholder="Generate concept image or diagram...">
+                    <button class="hud-action-btn" onclick="generateVisualConcept()">RENDER</button>
+                </div>
+                <div class="gen-preview-box" id="gen-preview-box" style="display: none;"></div>
             </div>
 
             <!-- Real-Time Activity Log Terminal -->

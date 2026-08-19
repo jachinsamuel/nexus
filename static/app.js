@@ -23,7 +23,6 @@ function initStarkHUD() {
     setupKeyboardAndMouseListeners();
     loadSavedEngineConfig();
     initSpeechRecognition();
-    initBackgroundCanvas();
     initArcReactorCanvas();
     startUptimeTimer();
 
@@ -33,6 +32,7 @@ function initStarkHUD() {
     fetchProcessList();
     fetchWorkspaceProjects();
     fetchNotesList();
+    probeLocalEngines();
 
     // Periodic Polling
     setInterval(fetchTelemetry, 6000);
@@ -773,7 +773,7 @@ function loadSavedEngineConfig() {
 }
 
 /* ==========================================================================
-   11. MULTI-LAYER STARK ARC REACTOR CANVAS ENGINE (60 FPS)
+   11. MINIMALIST LUMINOUS VOICE CORE RENDERER (60 FPS)
    ========================================================================== */
 function initArcReactorCanvas() {
     const canvas = document.getElementById("arc-canvas");
@@ -781,154 +781,63 @@ function initArcReactorCanvas() {
     const ctx = canvas.getContext("2d");
 
     const dpi = window.devicePixelRatio || 2;
-    canvas.width = 440 * dpi;
-    canvas.height = 440 * dpi;
+    canvas.width = 260 * dpi;
+    canvas.height = 260 * dpi;
 
     let angle = 0;
 
     function render() {
-        // Reset matrix to avoid compounding scale bugs
         ctx.setTransform(dpi, 0, 0, dpi, 0, 0);
-        ctx.clearRect(0, 0, 440, 440);
+        ctx.clearRect(0, 0, 260, 260);
 
-        const cx = 220;
-        const cy = 220;
+        const cx = 130;
+        const cy = 130;
 
-        // 1. Outer Turbine Calibration Ring (Rotating Clockwise)
+        // 1. Subtle Outer Breathing Halo Ring
         ctx.save();
         ctx.translate(cx, cy);
-        ctx.rotate(angle * 0.15);
-        
-        // Outer boundary circle
-        ctx.strokeStyle = "rgba(56, 189, 248, 0.25)";
-        ctx.lineWidth = 1.5;
+        ctx.rotate(angle * 0.2);
+
+        const baseColor = isSpeaking 
+            ? "rgba(16, 185, 129," 
+            : (isVoiceActive ? "rgba(56, 189, 248," : "rgba(56, 189, 248,");
+
+        ctx.strokeStyle = `${baseColor} 0.3)`;
+        ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.arc(0, 0, 208, 0, Math.PI * 2);
+        ctx.arc(0, 0, 118, 0, Math.PI * 2);
         ctx.stroke();
 
-        // 60 Azimuth Ticks
-        for (let i = 0; i < 60; i++) {
-            const rot = (i / 60) * Math.PI * 2;
-            const isMajor = i % 6 === 0;
-            const isMedium = i % 2 === 0;
-            const len = isMajor ? 12 : (isMedium ? 6 : 3);
-            const r1 = 206;
-            const r2 = r1 - len;
-
-            ctx.strokeStyle = isMajor ? "#38bdf8" : (isMedium ? "rgba(56, 189, 248, 0.6)" : "rgba(56, 189, 248, 0.2)");
-            ctx.lineWidth = isMajor ? 2.5 : 1;
+        // 4 Subtle Accent Nodes
+        for (let i = 0; i < 4; i++) {
+            const nodeAngle = (i / 4) * Math.PI * 2;
+            ctx.fillStyle = isSpeaking ? "#10b981" : "#38bdf8";
             ctx.beginPath();
-            ctx.moveTo(Math.cos(rot) * r1, Math.sin(rot) * r1);
-            ctx.lineTo(Math.cos(rot) * r2, Math.sin(rot) * r2);
-            ctx.stroke();
-
-            // Outer node dots at major angles
-            if (isMajor) {
-                ctx.fillStyle = "#38bdf8";
-                ctx.beginPath();
-                ctx.arc(Math.cos(rot) * 192, Math.sin(rot) * 192, 2, 0, Math.PI * 2);
-                ctx.fill();
-            }
+            ctx.arc(Math.cos(nodeAngle) * 118, Math.sin(nodeAngle) * 118, 2, 0, Math.PI * 2);
+            ctx.fill();
         }
         ctx.restore();
 
-        // 2. Ten Authentic Electromagnetic Copper Coil Transformer Blocks
-        const numCoils = 10;
-        const rOuter = 182;
-        const rInner = 120;
-        const arcHalfWidth = 0.22; // ~25.2 degrees span
-
-        for (let i = 0; i < numCoils; i++) {
-            const coilAngle = (i / numCoils) * Math.PI * 2;
-            ctx.save();
-            ctx.translate(cx, cy);
-            ctx.rotate(coilAngle);
-
-            // Transformer Core Block Fill
-            ctx.beginPath();
-            ctx.arc(0, 0, rOuter, -arcHalfWidth, arcHalfWidth);
-            ctx.arc(0, 0, rInner, arcHalfWidth, -arcHalfWidth, true);
-            ctx.closePath();
-            ctx.fillStyle = "rgba(12, 20, 40, 0.95)";
-            ctx.fill();
-            ctx.strokeStyle = "rgba(56, 189, 248, 0.6)";
-            ctx.lineWidth = 1.5;
-            ctx.stroke();
-
-            // Copper Coil Windings (Concentric Gold/Amber Filament Lines)
-            const numWindings = 5;
-            ctx.strokeStyle = "rgba(245, 158, 11, 0.85)";
-            ctx.lineWidth = 1.4;
-            for (let w = 0; w < numWindings; w++) {
-                const wAngle = -arcHalfWidth + (w + 1) * ((arcHalfWidth * 2) / (numWindings + 1));
-                ctx.beginPath();
-                ctx.moveTo(Math.cos(wAngle) * (rInner + 3), Math.sin(wAngle) * (rInner + 3));
-                ctx.lineTo(Math.cos(wAngle) * (rOuter - 3), Math.sin(wAngle) * (rOuter - 3));
-                ctx.stroke();
-            }
-
-            // Central Luminous Power Conduit Line
-            const pulseGlow = Math.sin(angle * 3 + i) * 0.35 + 0.65;
-            ctx.strokeStyle = `rgba(56, 189, 248, ${pulseGlow})`;
-            ctx.lineWidth = 3;
-            ctx.beginPath();
-            ctx.moveTo(rInner + 2, 0);
-            ctx.lineTo(rOuter - 2, 0);
-            ctx.stroke();
-
-            // Central Core Specular Dot
-            ctx.fillStyle = "#ffffff";
-            ctx.beginPath();
-            ctx.arc((rInner + rOuter) / 2, 0, 2.5, 0, Math.PI * 2);
-            ctx.fill();
-
-            // Outer Mechanical Retention Clamp Bracket (Titanium Anchor)
-            ctx.strokeStyle = "rgba(148, 163, 184, 0.8)";
-            ctx.lineWidth = 3;
-            ctx.beginPath();
-            ctx.arc(0, 0, rOuter + 2, -arcHalfWidth * 0.45, arcHalfWidth * 0.45);
-            ctx.stroke();
-
-            ctx.restore();
-        }
-
-        // 3. Counter-Rotating Inner Turbine Ring (Rotating Counter-Clockwise)
-        ctx.save();
-        ctx.translate(cx, cy);
-        ctx.rotate(-angle * 0.35);
-        for (let j = 0; j < 30; j++) {
-            const rot = (j / 30) * Math.PI * 2;
-            const r1 = 114;
-            const r2 = 106;
-            ctx.strokeStyle = "rgba(56, 189, 248, 0.6)";
-            ctx.lineWidth = 1.5;
-            ctx.beginPath();
-            ctx.moveTo(Math.cos(rot) * r1, Math.sin(rot) * r1);
-            ctx.lineTo(Math.cos(rot) * r2, Math.sin(rot) * r2);
-            ctx.stroke();
-        }
-        ctx.restore();
-
-        // 4. Audio Frequency Oscilloscope Plasma Waves
+        // 2. Fluid Waveform Ripple when Active/Speaking
         if (isSpeaking || isVoiceActive) {
             ctx.save();
             ctx.translate(cx, cy);
-            const numBars = 48;
-            const radius = 96;
+            const numWaves = 36;
+            const radius = 100;
 
-            for (let i = 0; i < numBars; i++) {
-                const barAngle = (i / numBars) * Math.PI * 2 + angle * 0.4;
-                const dynamicHeight = isSpeaking 
-                    ? (4 + Math.random() * 22) 
-                    : (2 + Math.sin(angle * 4 + i) * 7);
+            for (let i = 0; i < numWaves; i++) {
+                const waveAngle = (i / numWaves) * Math.PI * 2 + angle * 0.5;
+                const dynamicLen = isSpeaking
+                    ? 3 + Math.random() * 12
+                    : 2 + Math.sin(angle * 4 + i) * 6;
 
-                const x1 = Math.cos(barAngle) * radius;
-                const y1 = Math.sin(barAngle) * radius;
-                const x2 = Math.cos(barAngle) * (radius + dynamicHeight);
-                const y2 = Math.sin(barAngle) * (radius + dynamicHeight);
+                const x1 = Math.cos(waveAngle) * radius;
+                const y1 = Math.sin(waveAngle) * radius;
+                const x2 = Math.cos(waveAngle) * (radius + dynamicLen);
+                const y2 = Math.sin(waveAngle) * (radius + dynamicLen);
 
-                ctx.strokeStyle = isSpeaking ? "#10b981" : "rgba(56, 189, 248, 0.9)";
-                ctx.lineWidth = 1.8;
+                ctx.strokeStyle = isSpeaking ? "rgba(16, 185, 129, 0.85)" : "rgba(56, 189, 248, 0.85)";
+                ctx.lineWidth = 1.5;
                 ctx.beginPath();
                 ctx.moveTo(x1, y1);
                 ctx.lineTo(x2, y2);
@@ -937,28 +846,18 @@ function initArcReactorCanvas() {
             ctx.restore();
         }
 
-        // 5. Inner Concentric Power Ring & Radial Tri-Spoke Crystal Lines
+        // 3. Smooth Inner Luminous Ring
         ctx.save();
         ctx.translate(cx, cy);
-        ctx.strokeStyle = "rgba(56, 189, 248, 0.75)";
-        ctx.lineWidth = 2;
+        const pulse = Math.sin(angle * 2) * 0.2 + 0.6;
+        ctx.strokeStyle = `${baseColor} ${pulse})`;
+        ctx.lineWidth = 1.5;
         ctx.beginPath();
-        ctx.arc(0, 0, 92, 0, Math.PI * 2);
+        ctx.arc(0, 0, 96, 0, Math.PI * 2);
         ctx.stroke();
-
-        // 3 Radial Spoke Power Lines (120 deg apart)
-        for (let s = 0; s < 3; s++) {
-            const spokeAngle = (s / 3) * Math.PI * 2 + angle * 0.1;
-            ctx.strokeStyle = "rgba(56, 189, 248, 0.5)";
-            ctx.lineWidth = 1.5;
-            ctx.beginPath();
-            ctx.moveTo(Math.cos(spokeAngle) * 40, Math.sin(spokeAngle) * 40);
-            ctx.lineTo(Math.cos(spokeAngle) * 90, Math.sin(spokeAngle) * 90);
-            ctx.stroke();
-        }
         ctx.restore();
 
-        angle += 0.015;
+        angle += 0.02;
         requestAnimationFrame(render);
     }
 
@@ -966,116 +865,169 @@ function initArcReactorCanvas() {
 }
 
 /* ==========================================================================
-   12. TACTICAL BACKGROUND CANVAS & PARTICLE ENGINE (60 FPS)
+   13. MULTI-AGENT CREW DISPATCHER (CrewAI / AutoGPT)
    ========================================================================== */
-function initBackgroundCanvas() {
-    const canvas = document.getElementById("bg-canvas");
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
+async function dispatchAgentCrew() {
+    const input = document.getElementById("agent-mission-input");
+    const mission = input.value.trim();
+    if (!mission) return;
 
-    let width = (canvas.width = window.innerWidth);
-    let height = (canvas.height = window.innerHeight);
+    const streamBox = document.getElementById("agent-steps-stream");
+    const resultBox = document.getElementById("agent-result-box");
+    streamBox.style.display = "flex";
+    resultBox.style.display = "none";
+    resultBox.innerHTML = "";
 
-    window.addEventListener("resize", () => {
-        width = canvas.width = window.innerWidth;
-        height = canvas.height = window.innerHeight;
-    });
+    logEvent("AGENT", `Dispatching Autonomous Crew for mission: "${mission}"`);
 
-    // 40 Floating Ambient Tactical Particles
-    const particles = [];
-    const numParticles = 40;
-    for (let i = 0; i < numParticles; i++) {
-        particles.push({
-            x: Math.random() * width,
-            y: Math.random() * height,
-            vx: (Math.random() - 0.5) * 0.35,
-            vy: (Math.random() - 0.5) * 0.35,
-            size: Math.random() * 2 + 1,
-            alpha: Math.random() * 0.45 + 0.15
+    // Reset step styles
+    const step1 = document.getElementById("agent-step-commander");
+    const step2 = document.getElementById("agent-step-researcher");
+    const step3 = document.getElementById("agent-step-engineer");
+    step1.style.borderColor = "var(--cyan-core)";
+    step2.style.borderColor = "rgba(56, 189, 248, 0.15)";
+    step3.style.borderColor = "rgba(56, 189, 248, 0.15)";
+
+    const provider = localStorage.getItem("nexus_provider") || "gemini";
+    const apiKey = localStorage.getItem("nexus_api_key") || "";
+    const model = localStorage.getItem("nexus_model") || "";
+
+    try {
+        const res = await fetch("/api/agents/orchestrate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ mission, provider, apiKey, model })
         });
+        const data = await res.json();
+        
+        step1.style.borderColor = "var(--green-core)";
+        step2.style.borderColor = "var(--green-core)";
+        step3.style.borderColor = "var(--green-core)";
+
+        resultBox.style.display = "block";
+        resultBox.innerHTML = `<strong>MISSION COMPLETE (${data.elapsed_seconds}s)</strong><br><br>${data.final_response.replace(/\n/g, '<br>')}`;
+        logEvent("AGENT", `Crew mission resolved in ${data.elapsed_seconds}s.`);
+        speakText(data.final_response.slice(0, 140));
+    } catch (e) {
+        resultBox.style.display = "block";
+        resultBox.innerHTML = `<span style="color: var(--red-core);">Crew execution error: ${e.message}</span>`;
     }
-
-    let bgAngle = 0;
-
-    function renderBg() {
-        ctx.clearRect(0, 0, width, height);
-
-        const cx = width / 2;
-        const cy = height / 2;
-
-        // 1. Slow-Rotating Tactical Sonar Rings
-        ctx.save();
-        ctx.translate(cx, cy);
-        ctx.rotate(bgAngle * 0.05);
-
-        // Ring 1 (Radius 360)
-        ctx.strokeStyle = "rgba(56, 189, 248, 0.08)";
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.arc(0, 0, 360, 0, Math.PI * 2);
-        ctx.stroke();
-
-        // Ring 2 (Radius 520) with dashed intervals
-        ctx.strokeStyle = "rgba(56, 189, 248, 0.05)";
-        ctx.setLineDash([8, 12]);
-        ctx.beginPath();
-        ctx.arc(0, 0, 520, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.setLineDash([]);
-
-        // Ring 3 (Radius 680) with 8 Azimuth Compass Crosshair Notches
-        ctx.strokeStyle = "rgba(56, 189, 248, 0.07)";
-        for (let i = 0; i < 8; i++) {
-            const rot = (i / 8) * Math.PI * 2;
-            const r1 = 680;
-            const r2 = 665;
-            ctx.beginPath();
-            ctx.moveTo(Math.cos(rot) * r1, Math.sin(rot) * r1);
-            ctx.lineTo(Math.cos(rot) * r2, Math.sin(rot) * r2);
-            ctx.stroke();
-        }
-
-        ctx.restore();
-
-        // 2. Blueprint Grid Intersect Crosshairs (+)
-        const gridStep = 200;
-        const startX = (width % gridStep) / 2;
-        const startY = (height % gridStep) / 2;
-
-        ctx.strokeStyle = "rgba(56, 189, 248, 0.18)";
-        ctx.lineWidth = 1;
-
-        for (let x = startX; x < width; x += gridStep) {
-            for (let y = startY; y < height; y += gridStep) {
-                const arm = 4;
-                ctx.beginPath();
-                ctx.moveTo(x - arm, y);
-                ctx.lineTo(x + arm, y);
-                ctx.moveTo(x, y - arm);
-                ctx.lineTo(x, y + arm);
-                ctx.stroke();
-            }
-        }
-
-        // 3. Floating Ambient Tactical Energy Particles
-        for (let p of particles) {
-            p.x += p.vx;
-            p.y += p.vy;
-
-            if (p.x < 0) p.x = width;
-            if (p.x > width) p.x = 0;
-            if (p.y < 0) p.y = height;
-            if (p.y > height) p.y = 0;
-
-            ctx.fillStyle = `rgba(56, 189, 248, ${p.alpha})`;
-            ctx.beginPath();
-            ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-            ctx.fill();
-        }
-
-        bgAngle += 0.01;
-        requestAnimationFrame(renderBg);
-    }
-
-    renderBg();
 }
+
+/* ==========================================================================
+   14. RAG KNOWLEDGE VAULT (RAGFlow / Dify)
+   ========================================================================== */
+async function handleRagFileUpload(input) {
+    if (!input.files || !input.files[0]) return;
+    const file = input.files[0];
+    const statusLabel = document.getElementById("rag-upload-status");
+    statusLabel.innerText = `Indexing ${file.name}...`;
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+        const res = await fetch("/api/documents/upload", {
+            method: "POST",
+            body: formData
+        });
+        const data = await res.json();
+        statusLabel.innerText = `Indexed ${data.chunk_count} chunks`;
+        logEvent("RAG", `Document '${file.name}' indexed into vector memory (${data.chunk_count} chunks).`);
+    } catch (e) {
+        statusLabel.innerText = "Upload failed";
+    }
+}
+
+async function queryRagVault() {
+    const input = document.getElementById("rag-query-input");
+    const query = input.value.trim();
+    if (!query) return;
+
+    const stream = document.getElementById("rag-results-stream");
+    stream.innerHTML = "<div class='stream-empty'>Executing hybrid vector search...</div>";
+
+    const provider = localStorage.getItem("nexus_provider") || "gemini";
+    const apiKey = localStorage.getItem("nexus_api_key") || "";
+
+    try {
+        const res = await fetch("/api/rag/query", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ query, provider, apiKey })
+        });
+        const data = await res.json();
+        
+        if (!data.results || data.results.length === 0) {
+            stream.innerHTML = "<div class='stream-empty'>No vector matches found.</div>";
+            return;
+        }
+
+        stream.innerHTML = data.results.map(r => `
+            <div class="rag-chunk-card">
+                <div class="rag-chunk-title">${r.doc_name} (Chunk ${r.chunk_index} // Score ${r.score})</div>
+                <div>${r.content.slice(0, 120)}...</div>
+            </div>
+        `).join("");
+    } catch (e) {
+        stream.innerHTML = `<div class='stream-empty' style='color: var(--red-core);'>Search error: ${e.message}</div>`;
+    }
+}
+
+/* ==========================================================================
+   15. LOCAL AI RUNTIMES PROBER
+   ========================================================================== */
+async function probeLocalEngines() {
+    try {
+        const res = await fetch("/api/providers/status");
+        const data = await res.json();
+        const local = data.local || {};
+
+        const setPill = (id, online) => {
+            const el = document.getElementById(id);
+            if (el) {
+                if (online) el.classList.add("online");
+                else el.classList.remove("online");
+            }
+        };
+
+        setPill("probe-ollama", local.ollama?.online);
+        setPill("probe-llamacpp", local.llama_cpp?.online);
+        setPill("probe-lmstudio", local.lm_studio?.online);
+        setPill("probe-comfyui", local.comfyui?.online);
+        setPill("probe-sdwebui", local.sd_webui?.online);
+    } catch (e) {}
+}
+
+/* ==========================================================================
+   16. GENERATIVE VISUAL STUDIO (ComfyUI / SD / Pollinations)
+   ========================================================================== */
+async function generateVisualConcept() {
+    const input = document.getElementById("gen-prompt-input");
+    const prompt = input.value.trim();
+    if (!prompt) return;
+
+    const preview = document.getElementById("gen-preview-box");
+    preview.style.display = "block";
+    preview.innerHTML = "<div class='stream-empty'>Synthesizing visual concept...</div>";
+    logEvent("GEN", `Generating visual concept: "${prompt}"`);
+
+    try {
+        const res = await fetch("/api/generative/image", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ prompt, width: 400, height: 400 })
+        });
+        const data = await res.json();
+        
+        const imgSrc = data.image_base64 || data.image_url;
+        preview.innerHTML = `
+            <img src="${imgSrc}" class="gen-preview-img" alt="Generative Concept">
+            <div style="font-family: var(--font-mono); font-size: 0.54rem; color: var(--cyan-core); margin-top: 3px;">ENGINE: ${data.engine}</div>
+        `;
+        logEvent("GEN", `Visual concept rendered via ${data.engine}.`);
+    } catch (e) {
+        preview.innerHTML = `<div class='stream-empty' style='color: var(--red-core);'>Render failed: ${e.message}</div>`;
+    }
+}
+
