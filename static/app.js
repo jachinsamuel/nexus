@@ -52,10 +52,10 @@ function initStarkHUD() {
    1. KEYBOARD & EVENT LISTENERS
    ========================================================================== */
 function setupKeyboardAndMouseListeners() {
-    // Voice Entity Click
-    const core = document.getElementById("voice-entity-core") || document.getElementById("arc-reactor-core");
-    if (core) {
-        core.addEventListener("click", toggleVoiceMode);
+    // Agent Emblem Click
+    const emblem = document.getElementById("agent-emblem-stage") || document.getElementById("avatar-stage") || document.getElementById("voice-entity-core") || document.getElementById("arc-reactor-core");
+    if (emblem) {
+        emblem.addEventListener("click", toggleVoiceMode);
     }
 
     // Command Form Submit
@@ -447,12 +447,12 @@ function updateReactorState(state, transcriptText) {
     if (stateEl) stateEl.innerText = state;
     if (transcriptEl && transcriptText) transcriptEl.innerText = transcriptText;
 
-    const entityCore = document.getElementById("voice-entity-core");
-    if (entityCore) {
-        entityCore.classList.remove("listening", "thinking", "speaking");
-        if (state === "LISTENING") entityCore.classList.add("listening");
-        else if (state === "THINKING") entityCore.classList.add("thinking");
-        else if (state === "SPEAKING") entityCore.classList.add("speaking");
+    const emblemStage = document.getElementById("agent-emblem-stage") || document.getElementById("avatar-stage") || document.getElementById("voice-entity-core");
+    if (emblemStage) {
+        emblemStage.classList.remove("listening", "thinking", "speaking");
+        if (state === "LISTENING") emblemStage.classList.add("listening");
+        else if (state === "THINKING") emblemStage.classList.add("thinking");
+        else if (state === "SPEAKING") emblemStage.classList.add("speaking");
     }
 
     if (dockMic) {
@@ -803,202 +803,414 @@ function loadSavedEngineConfig() {
 }
 
 /* ==========================================================================
-   11. VOLUMETRIC LIQUID PLASMA LIGHT ENTITY (CHATGPT VOICE & HUME STYLE)
+   11. ICONIC 3D ISOMETRIC GEOMETRIC AGENT EMBLEM (CODEX / CURSOR STYLE)
    ========================================================================== */
 function initArcReactorCanvas() {
-    const canvas = document.getElementById("plasma-canvas") || document.getElementById("arc-canvas");
+    const canvas = document.getElementById("emblem-canvas") || document.getElementById("avatar-optic-canvas") || document.getElementById("plasma-canvas") || document.getElementById("arc-canvas");
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
 
     const dpi = window.devicePixelRatio || 2;
-    canvas.width = 440 * dpi;
-    canvas.height = 440 * dpi;
+    const baseW = 360;
+    const baseH = 360;
+    canvas.width = baseW * dpi;
+    canvas.height = baseH * dpi;
 
     let time = 0;
-    let smoothState = {
-        coreRadius: 60,
-        lobeRadius: 75,
-        orbitDist: 32,
-        speed: 1.0,
-        c1: [56, 189, 248],   // Electric Cyan
-        c2: [99, 102, 241],   // Cosmic Indigo
-        c3: [14, 165, 233],   // Sky Blue
-        c4: [139, 92, 246]    // Violet
-    };
+    let rotX = 0.45;
+    let rotY = 0.3;
+    let rotZ = 0.15;
+    let coreRotY = 0;
+    let coreRotX = 0;
 
-    // Ambient floating orbital micro-photons
-    const photons = [];
-    for (let i = 0; i < 16; i++) {
-        photons.push({
-            angle: Math.random() * Math.PI * 2,
-            distance: 50 + Math.random() * 55,
-            speed: (0.003 + Math.random() * 0.006) * (Math.random() > 0.5 ? 1 : -1),
-            size: 1.0 + Math.random() * 2.0,
-            opacity: 0.25 + Math.random() * 0.5
-        });
+    let mouseOffset = { x: 0, y: 0 };
+    let smoothMouse = { x: 0, y: 0 };
+
+    window.addEventListener("mousemove", (e) => {
+        const cx = window.innerWidth / 2;
+        const cy = window.innerHeight / 2;
+        mouseOffset.x = Math.max(-1, Math.min(1, (e.clientX - cx) / (cx || 1)));
+        mouseOffset.y = Math.max(-1, Math.min(1, (e.clientY - cy) / (cy || 1)));
+    });
+
+    window.addEventListener("mouseleave", () => {
+        mouseOffset.x = 0;
+        mouseOffset.y = 0;
+    });
+
+    // Color interpolation
+    let smoothColor = [56, 189, 248]; // Cyan
+    const waveRings = [];
+
+    // Precompute Trefoil Knot Geometry (Perfect 3-Lobe Centered Symmetry)
+    const N = 120;
+    const R = 38;
+    const ribbonWidth = 13.5;
+    const ribbonHeight = 5.8;
+
+    const knotPoints = [];
+    const tangents = [];
+
+    for (let i = 0; i < N; i++) {
+        const t = (i / N) * Math.PI * 2;
+        const x = (Math.sin(t) + 2 * Math.sin(2 * t)) * R;
+        const y = (Math.cos(t) - 2 * Math.cos(2 * t)) * R;
+        const z = -Math.sin(3 * t) * 0.95 * R;
+        knotPoints.push([x, y, z]);
+
+        const dx = (Math.cos(t) + 4 * Math.cos(2 * t)) * R;
+        const dy = (-Math.sin(t) + 4 * Math.sin(2 * t)) * R;
+        const dz = -3 * Math.cos(3 * t) * 0.95 * R;
+        const len = Math.hypot(dx, dy, dz) || 1;
+        tangents.push([dx / len, dy / len, dz / len]);
     }
 
-    // Outward soft bioluminescent acoustic pulse rings
-    const acousticWaves = [];
+    function dot3(a, b) { return a[0]*b[0] + a[1]*b[1] + a[2]*b[2]; }
+    function cross3(a, b) {
+        return [
+            a[1]*b[2] - a[2]*b[1],
+            a[2]*b[0] - a[0]*b[2],
+            a[0]*b[1] - a[1]*b[0]
+        ];
+    }
+    function norm3(v) {
+        const l = Math.hypot(...v) || 1;
+        return [v[0]/l, v[1]/l, v[2]/l];
+    }
+    function rotateAround(v, axis, angle) {
+        const cosA = Math.cos(angle);
+        const sinA = Math.sin(angle);
+        const d = dot3(axis, v);
+        const c = cross3(axis, v);
+        return [
+            v[0] * cosA + c[0] * sinA + axis[0] * d * (1 - cosA),
+            v[1] * cosA + c[1] * sinA + axis[1] * d * (1 - cosA),
+            v[2] * cosA + c[2] * sinA + axis[2] * d * (1 - cosA)
+        ];
+    }
+
+    // Parallel transport normals
+    const normals = [];
+    normals.push(norm3(cross3([0, 0, 1], tangents[0])));
+
+    for (let i = 0; i < N - 1; i++) {
+        const T1 = tangents[i];
+        const T2 = tangents[i + 1];
+        let A = cross3(T1, T2);
+        const aLen = Math.hypot(...A);
+        if (aLen < 1e-6) {
+            normals.push(normals[i]);
+        } else {
+            A = [A[0]/aLen, A[1]/aLen, A[2]/aLen];
+            const angle = Math.acos(Math.max(-1, Math.min(1, dot3(T1, T2))));
+            normals.push(norm3(rotateAround(normals[i], A, angle)));
+        }
+    }
+
+    // Twist holonomy correction to perfectly close the ribbon
+    let Alast = cross3(tangents[N - 1], tangents[0]);
+    let nFinal = normals[N - 1];
+    const aLenLast = Math.hypot(...Alast);
+    if (aLenLast >= 1e-6) {
+        Alast = [Alast[0]/aLenLast, Alast[1]/aLenLast, Alast[2]/aLenLast];
+        const angle = Math.acos(Math.max(-1, Math.min(1, dot3(tangents[N - 1], tangents[0]))));
+        nFinal = norm3(rotateAround(normals[N - 1], Alast, angle));
+    }
+    const twistDiff = Math.atan2(dot3(cross3(nFinal, normals[0]), tangents[0]), dot3(nFinal, normals[0]));
+    for (let i = 0; i < N; i++) {
+        normals[i] = norm3(rotateAround(normals[i], tangents[i], (i / N) * twistDiff));
+    }
+
+    // Build base mesh slices
+    const baseSlices = [];
+    for (let i = 0; i < N; i++) {
+        const p = knotPoints[i];
+        const n = normals[i];
+        const b = norm3(cross3(tangents[i], n));
+        const w = ribbonWidth;
+        const h = ribbonHeight;
+        baseSlices.push([
+            [p[0] + w*n[0] + h*b[0], p[1] + w*n[1] + h*b[1], p[2] + w*n[2] + h*b[2]],
+            [p[0] - w*n[0] + h*b[0], p[1] - w*n[1] + h*b[1], p[2] - w*n[2] + h*b[2]],
+            [p[0] - w*n[0] - h*b[0], p[1] - w*n[1] - h*b[1], p[2] - w*n[2] - h*b[2]],
+            [p[0] + w*n[0] - h*b[0], p[1] + w*n[1] - h*b[1], p[2] + w*n[2] - h*b[2]]
+        ]);
+    }
+
+    // Core Octahedron Vertices & Faces
+    const coreRadius = 20;
+    const coreVerts = [
+        [0, 0, coreRadius],
+        [0, 0, -coreRadius],
+        [coreRadius, 0, 0],
+        [-coreRadius, 0, 0],
+        [0, coreRadius, 0],
+        [0, -coreRadius, 0]
+    ];
+    const coreFaces = [
+        [0, 2, 4], [0, 4, 3], [0, 3, 5], [0, 5, 2],
+        [1, 4, 2], [1, 3, 4], [1, 5, 3], [1, 2, 5]
+    ];
+
+    // Light source & camera vectors
+    const lightDir = norm3([-0.5, -0.65, 0.58]);
+    const camDir = [0, 0, 1];
+    const halfDir = norm3([lightDir[0] + camDir[0], lightDir[1] + camDir[1], lightDir[2] + camDir[2]]);
 
     function render() {
         ctx.setTransform(dpi, 0, 0, dpi, 0, 0);
-        ctx.clearRect(0, 0, 440, 440);
+        ctx.clearRect(0, 0, baseW, baseH);
 
-        const cx = 220;
-        const cy = 220;
+        smoothMouse.x += (mouseOffset.x - smoothMouse.x) * 0.06;
+        smoothMouse.y += (mouseOffset.y - smoothMouse.y) * 0.06;
 
-        // Determine target parameters based on state
-        let targetCoreR = 58;
-        let targetLobeR = 76;
-        let targetDist = 32;
-        let targetSpeed = 1.0;
-        let targetC1 = [56, 189, 248];  // Cyan
-        let targetC2 = [99, 102, 241];  // Indigo
-        let targetC3 = [14, 165, 233];  // Sky Blue
-        let targetC4 = [139, 92, 246];  // Violet
+        // Color target based on state
+        let targetColor = [56, 189, 248]; // Cyan (Standby)
+        let rotSpeed = 0.007;
+        let scaleFactor = 1.0;
 
         if (isSpeaking) {
-            targetCoreR = 66 + Math.sin(time * 0.09) * 6;
-            targetLobeR = 88 + Math.cos(time * 0.08) * 8;
-            targetDist = 42 + Math.sin(time * 0.07) * 6;
-            targetSpeed = 2.2;
-            targetC1 = [45, 212, 191];  // Turquoise
-            targetC2 = [56, 189, 248];  // Cyan
-            targetC3 = [16, 185, 129];  // Emerald
-            targetC4 = [99, 102, 241];  // Indigo
-
-            if (Math.random() < 0.07 && acousticWaves.length < 5) {
-                acousticWaves.push({ r: 65, opacity: 0.5 });
-            }
+            targetColor = [45, 212, 191]; // Turquoise
+            rotSpeed = 0.012;
+            scaleFactor = 1.04 + Math.sin(time * 0.15) * 0.03;
         } else if (isProcessing) {
-            targetCoreR = 62;
-            targetLobeR = 82;
-            targetDist = 38;
-            targetSpeed = 1.8;
-            targetC1 = [168, 85, 247];  // Violet
-            targetC2 = [217, 70, 239];  // Magenta
-            targetC3 = [245, 158, 11];  // Warm Amber
-            targetC4 = [56, 189, 248];  // Cyan
+            targetColor = [168, 85, 247]; // Violet / Iris
+            rotSpeed = 0.024;
+            scaleFactor = 1.02 + Math.sin(time * 0.25) * 0.02;
         } else if (isVoiceActive) {
-            targetCoreR = 64 + Math.sin(time * 0.06) * 4;
-            targetLobeR = 84 + Math.cos(time * 0.05) * 5;
-            targetDist = 36;
-            targetSpeed = 1.5;
-            targetC1 = [16, 185, 129];  // Emerald
-            targetC2 = [45, 212, 191];  // Turquoise
-            targetC3 = [56, 189, 248];  // Cyan
-            targetC4 = [5, 150, 105];   // Deep Mint
+            targetColor = [16, 185, 129]; // Emerald
+            rotSpeed = 0.009;
+            scaleFactor = 1.05 + Math.sin(time * 0.08) * 0.02;
         }
-
-        // Smooth physics interpolation (Spring interpolation)
-        smoothState.coreRadius += (targetCoreR - smoothState.coreRadius) * 0.07;
-        smoothState.lobeRadius += (targetLobeR - smoothState.lobeRadius) * 0.07;
-        smoothState.orbitDist += (targetDist - smoothState.orbitDist) * 0.07;
-        smoothState.speed += (targetSpeed - smoothState.speed) * 0.07;
 
         for (let i = 0; i < 3; i++) {
-            smoothState.c1[i] += (targetC1[i] - smoothState.c1[i]) * 0.06;
-            smoothState.c2[i] += (targetC2[i] - smoothState.c2[i]) * 0.06;
-            smoothState.c3[i] += (targetC3[i] - smoothState.c3[i]) * 0.06;
-            smoothState.c4[i] += (targetC4[i] - smoothState.c4[i]) * 0.06;
+            smoothColor[i] += (targetColor[i] - smoothColor[i]) * 0.08;
+        }
+        const [cr, cg, cb] = smoothColor.map(Math.round);
+
+        // Isometric 3D Rotation angles (Z-axis revolution preserves 3-lobe iconic silhouette)
+        rotZ += rotSpeed;
+        const curRotX = 0.58 + smoothMouse.y * 0.25 + (isProcessing ? Math.sin(time * 0.04) * 0.1 : 0);
+        const curRotY = smoothMouse.x * 0.28;
+        const curRotZ = rotZ;
+
+        coreRotY -= 0.018;
+        coreRotX += 0.012;
+
+        const cosX = Math.cos(curRotX), sinX = Math.sin(curRotX);
+        const cosY = Math.cos(curRotY), sinY = Math.sin(curRotY);
+        const cosZ = Math.cos(curRotZ), sinZ = Math.sin(curRotZ);
+
+        function project3D(pt, sc = 1.0) {
+            const px = pt[0] * sc;
+            const py = pt[1] * sc;
+            const pz = pt[2] * sc;
+
+            const x1 = px * cosY + pz * sinY;
+            const y1 = py;
+            const z1 = -px * sinY + pz * cosY;
+
+            const x2 = x1;
+            const y2 = y1 * cosX - z1 * sinX;
+            const z2 = y1 * sinX + z1 * cosX;
+
+            const x3 = x2 * cosZ - y2 * sinZ;
+            const y3 = x2 * sinZ + y2 * cosZ;
+            const z3 = z2;
+
+            const fov = 500;
+            const pers = fov / (fov + z3);
+            return [
+                (baseW / 2) + x3 * pers,
+                (baseH / 2) + y3 * pers,
+                z3,
+                [x3, y3, z3]
+            ];
         }
 
-        const [r1, g1, b1] = smoothState.c1.map(Math.round);
-        const [r2, g2, b2] = smoothState.c2.map(Math.round);
-        const [r3, g3, b3] = smoothState.c3.map(Math.round);
-        const [r4, g4, b4] = smoothState.c4.map(Math.round);
+        // 1. Acoustic Wave Rings when Voice Active or Speaking
+        if ((isVoiceActive || isSpeaking) && time % 36 === 0) {
+            waveRings.push({ r: 50, opacity: 0.8 });
+        }
 
-        // Switch to Optical Additive Screen Blending for real light fusion
-        ctx.globalCompositeOperation = "screen";
-
-        // 1. Soft Background Chroma Glow
-        const bgGlow = ctx.createRadialGradient(cx, cy, 20, cx, cy, 180);
-        bgGlow.addColorStop(0, `rgba(${r1}, ${g1}, ${b1}, 0.22)`);
-        bgGlow.addColorStop(0.5, `rgba(${r2}, ${g2}, ${b2}, 0.08)`);
-        bgGlow.addColorStop(1, "rgba(0, 0, 0, 0)");
-        ctx.fillStyle = bgGlow;
-        ctx.beginPath();
-        ctx.arc(cx, cy, 180, 0, Math.PI * 2);
-        ctx.fill();
-
-        // 2. Outward Acoustic Pulse Waves
-        for (let i = acousticWaves.length - 1; i >= 0; i--) {
-            const wave = acousticWaves[i];
-            wave.r += 1.8;
-            wave.opacity -= 0.014;
-            if (wave.opacity <= 0) {
-                acousticWaves.splice(i, 1);
+        for (let i = waveRings.length - 1; i >= 0; i--) {
+            const ring = waveRings[i];
+            ring.r += 1.4;
+            ring.opacity -= 0.018;
+            if (ring.opacity <= 0) {
+                waveRings.splice(i, 1);
                 continue;
             }
-            const waveGrad = ctx.createRadialGradient(cx, cy, Math.max(0, wave.r - 15), cx, cy, wave.r + 15);
-            waveGrad.addColorStop(0, `rgba(${r1}, ${g1}, ${b1}, 0)`);
-            waveGrad.addColorStop(0.5, `rgba(${r1}, ${g1}, ${b1}, ${wave.opacity * 0.4})`);
-            waveGrad.addColorStop(1, `rgba(${r1}, ${g1}, ${b1}, 0)`);
-            ctx.fillStyle = waveGrad;
+            ctx.save();
             ctx.beginPath();
-            ctx.arc(cx, cy, wave.r + 15, 0, Math.PI * 2);
-            ctx.fill();
+            ctx.arc(baseW / 2, baseH / 2, ring.r, 0, Math.PI * 2);
+            ctx.strokeStyle = `rgba(${cr}, ${cg}, ${cb}, ${ring.opacity * 0.35})`;
+            ctx.lineWidth = 1;
+            ctx.stroke();
+            ctx.restore();
         }
 
-        // 3. Four Morphing Volumetric Liquid Plasma Lobes
-        const t = time * 0.016 * smoothState.speed;
-        const lobes = [
-            { angle: t * 1.0, distMult: 1.0, rMult: 1.0, color: [r1, g1, b1] },
-            { angle: t * 0.8 + Math.PI * 0.5, distMult: 1.1, rMult: 0.95, color: [r2, g2, b2] },
-            { angle: -t * 0.9 + Math.PI, distMult: 0.9, rMult: 1.05, color: [r3, g3, b3] },
-            { angle: -t * 0.7 + Math.PI * 1.5, distMult: 1.05, rMult: 0.92, color: [r4, g4, b4] }
-        ];
+        // Project all knot vertices
+        const projSlices = [];
+        for (let i = 0; i < N; i++) {
+            const s = baseSlices[i];
+            projSlices.push([
+                project3D(s[0], scaleFactor),
+                project3D(s[1], scaleFactor),
+                project3D(s[2], scaleFactor),
+                project3D(s[3], scaleFactor)
+            ]);
+        }
 
-        lobes.forEach((lobe, idx) => {
-            const dynamicDist = (smoothState.orbitDist + Math.sin(t * 1.4 + idx) * 8) * lobe.distMult;
-            const lx = cx + Math.cos(lobe.angle) * dynamicDist;
-            const ly = cy + Math.sin(lobe.angle) * dynamicDist;
-            const dynamicR = (smoothState.lobeRadius + Math.cos(t * 1.2 + idx * 2) * 10) * lobe.rMult;
+        // Build polygons to render with depth
+        const polys = [];
 
-            const [lr, lg, lb] = lobe.color;
-            const lobeGrad = ctx.createRadialGradient(lx, ly, 0, lx, ly, dynamicR);
-            lobeGrad.addColorStop(0, `rgba(${lr}, ${lg}, ${lb}, 0.85)`);
-            lobeGrad.addColorStop(0.35, `rgba(${lr}, ${lg}, ${lb}, 0.55)`);
-            lobeGrad.addColorStop(0.7, `rgba(${lr}, ${lg}, ${lb}, 0.18)`);
-            lobeGrad.addColorStop(1, "rgba(0, 0, 0, 0)");
+        for (let i = 0; i < N; i++) {
+            const next = (i + 1) % N;
+            const s1 = projSlices[i];
+            const s2 = projSlices[next];
 
-            ctx.fillStyle = lobeGrad;
+            const faces = [
+                [s1[0], s1[1], s2[1], s2[0]], // Top
+                [s1[1], s1[2], s2[2], s2[1]], // Right
+                [s1[2], s1[3], s2[3], s2[2]], // Bottom
+                [s1[3], s1[0], s2[0], s2[3]]  // Left
+            ];
+
+            faces.forEach((f, fIdx) => {
+                const avgZ = (f[0][2] + f[1][2] + f[2][2] + f[3][2]) / 4;
+                const p0 = f[0][3], p1 = f[1][3], p2 = f[2][3];
+                const v1 = [p1[0] - p0[0], p1[1] - p0[1], p1[2] - p0[2]];
+                const v2 = [p2[0] - p0[0], p2[1] - p0[1], p2[2] - p0[2]];
+                const norm = norm3(cross3(v1, v2));
+
+                polys.push({
+                    pts: f,
+                    z: avgZ,
+                    norm: norm,
+                    type: 'ribbon',
+                    sliceIdx: i,
+                    faceIdx: fIdx
+                });
+            });
+        }
+
+        // Project Core Octahedron
+        const cCosX = Math.cos(coreRotX), cSinX = Math.sin(coreRotX);
+        const cCosY = Math.cos(coreRotY), cSinY = Math.sin(coreRotY);
+
+        const projCore = coreVerts.map(v => {
+            const x1 = v[0] * cCosY + v[2] * cSinY;
+            const y1 = v[1];
+            const z1 = -v[0] * cSinY + v[2] * cCosY;
+            const x2 = x1;
+            const y2 = y1 * cCosX - z1 * cSinX;
+            const z2 = y1 * cSinX + z1 * cCosX;
+            const fov = 500;
+            const pers = fov / (fov + z2);
+            return [
+                (baseW / 2) + x2 * pers,
+                (baseH / 2) + y2 * pers,
+                z2,
+                [x2, y2, z2]
+            ];
+        });
+
+        coreFaces.forEach(cf => {
+            const fPts = [projCore[cf[0]], projCore[cf[1]], projCore[cf[2]]];
+            const avgZ = (fPts[0][2] + fPts[1][2] + fPts[2][2]) / 3;
+            const p0 = fPts[0][3], p1 = fPts[1][3], p2 = fPts[2][3];
+            const v1 = [p1[0] - p0[0], p1[1] - p0[1], p1[2] - p0[2]];
+            const v2 = [p2[0] - p0[0], p2[1] - p0[1], p2[2] - p0[2]];
+            const norm = norm3(cross3(v1, v2));
+            polys.push({
+                pts: fPts,
+                z: avgZ,
+                norm: norm,
+                type: 'core'
+            });
+        });
+
+        // Depth Sort: Painter's Algorithm
+        polys.sort((a, b) => b.z - a.z);
+
+        // Render sorted polygons
+        for (let k = 0; k < polys.length; k++) {
+            const poly = polys[k];
+            const pts = poly.pts;
+
+            if (poly.type === 'core') {
+                const diffuse = Math.max(0, dot3(poly.norm, lightDir));
+                ctx.beginPath();
+                ctx.moveTo(pts[0][0], pts[0][1]);
+                ctx.lineTo(pts[1][0], pts[1][1]);
+                ctx.lineTo(pts[2][0], pts[2][1]);
+                ctx.closePath();
+
+                ctx.fillStyle = `rgba(${cr}, ${cg}, ${cb}, ${0.28 + diffuse * 0.38})`;
+                ctx.fill();
+                ctx.strokeStyle = `rgba(255, 255, 255, ${0.6 + diffuse * 0.4})`;
+                ctx.lineWidth = 1.0;
+                ctx.stroke();
+                continue;
+            }
+
+            // Ribbon Face Shading (Anodized Titanium / Obsidian Metamaterial)
+            const diff = Math.max(0, dot3(poly.norm, lightDir));
+            const spec = Math.pow(Math.max(0, dot3(poly.norm, halfDir)), 16);
+
+            const phase = (poly.sliceIdx / N) * Math.PI * 2 + time * 0.03;
+            const waveGlow = Math.sin(phase) * 0.15 + 0.15;
+
+            // Rich multi-tonal shading
+            const ambientR = 14, ambientG = 18, ambientB = 28;
+            const diffR = diff * 42, diffG = diff * 48, diffB = diff * 64;
+            const specR = spec * 200, specG = spec * 215, specB = spec * 240;
+            const tintFactor = 0.12 + diff * 0.22 + waveGlow * 0.18;
+            const tintR = cr * tintFactor;
+            const tintG = cg * tintFactor;
+            const tintB = cb * tintFactor;
+
+            const r = Math.min(255, Math.round(ambientR + diffR + specR + tintR));
+            const g = Math.min(255, Math.round(ambientG + diffG + specG + tintG));
+            const b = Math.min(255, Math.round(ambientB + diffB + specB + tintB));
+
             ctx.beginPath();
-            ctx.arc(lx, ly, dynamicR, 0, Math.PI * 2);
+            ctx.moveTo(pts[0][0], pts[0][1]);
+            for (let p = 1; p < pts.length; p++) {
+                ctx.lineTo(pts[p][0], pts[p][1]);
+            }
+            ctx.closePath();
+
+            ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
+            ctx.fill();
+
+            // Crisp vector edge outline (Codex signature aesthetic)
+            const edgeAlpha = Math.min(0.9, 0.3 + diff * 0.4 + spec * 0.3);
+            ctx.strokeStyle = `rgba(${cr}, ${cg}, ${cb}, ${edgeAlpha})`;
+            ctx.lineWidth = 0.75;
+            ctx.stroke();
+        }
+
+        // Render Singularity Core Vertices (Glowing points)
+        projCore.forEach(cv => {
+            ctx.beginPath();
+            ctx.arc(cv[0], cv[1], 2, 0, Math.PI * 2);
+            ctx.fillStyle = "rgba(255, 255, 255, 0.9)";
             ctx.fill();
         });
 
-        // 4. White-Hot Luminous Core Nucleus (Additive Light Peak)
-        const coreGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, smoothState.coreRadius);
-        coreGrad.addColorStop(0, "rgba(255, 255, 255, 0.96)");
-        coreGrad.addColorStop(0.25, `rgba(224, 242, 254, 0.85)`);
-        coreGrad.addColorStop(0.55, `rgba(${r1}, ${g1}, ${b1}, 0.45)`);
-        coreGrad.addColorStop(0.85, `rgba(${r2}, ${g2}, ${b2}, 0.15)`);
-        coreGrad.addColorStop(1, "rgba(0, 0, 0, 0)");
+        // Central Quantum Singularity Radiant Point
+        const centerPt = project3D([0, 0, 0]);
+        const singGrad = ctx.createRadialGradient(centerPt[0], centerPt[1], 0, centerPt[0], centerPt[1], 18);
+        singGrad.addColorStop(0, "rgba(255, 255, 255, 1.0)");
+        singGrad.addColorStop(0.35, `rgba(${cr}, ${cg}, ${cb}, 0.75)`);
+        singGrad.addColorStop(1, "rgba(0, 0, 0, 0)");
 
-        ctx.fillStyle = coreGrad;
+        ctx.fillStyle = singGrad;
         ctx.beginPath();
-        ctx.arc(cx, cy, smoothState.coreRadius, 0, Math.PI * 2);
+        ctx.arc(centerPt[0], centerPt[1], 18, 0, Math.PI * 2);
         ctx.fill();
-
-        // 5. Drifting Micro-Photons (Living Plasma Stardust)
-        photons.forEach(p => {
-            p.angle += p.speed * smoothState.speed;
-            const px = cx + Math.cos(p.angle) * p.distance;
-            const py = cy + Math.sin(p.angle) * p.distance;
-            const pGrad = ctx.createRadialGradient(px, py, 0, px, py, p.size * 2);
-            pGrad.addColorStop(0, `rgba(255, 255, 255, ${p.opacity})`);
-            pGrad.addColorStop(0.5, `rgba(${r1}, ${g1}, ${b1}, ${p.opacity * 0.6})`);
-            pGrad.addColorStop(1, "rgba(0, 0, 0, 0)");
-            ctx.fillStyle = pGrad;
-            ctx.beginPath();
-            ctx.arc(px, py, p.size * 2, 0, Math.PI * 2);
-            ctx.fill();
-        });
-
-        // Reset composite operation to normal
-        ctx.globalCompositeOperation = "source-over";
 
         time += 1;
         requestAnimationFrame(render);
