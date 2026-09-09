@@ -52,8 +52,8 @@ function initStarkHUD() {
    1. KEYBOARD & EVENT LISTENERS
    ========================================================================== */
 function setupKeyboardAndMouseListeners() {
-    // Arc Reactor Click
-    const core = document.getElementById("arc-reactor-core");
+    // Voice Entity Click
+    const core = document.getElementById("voice-entity-core") || document.getElementById("arc-reactor-core");
     if (core) {
         core.addEventListener("click", toggleVoiceMode);
     }
@@ -442,15 +442,45 @@ function toggleVoiceMode() {
 function updateReactorState(state, transcriptText) {
     const stateEl = document.getElementById("nexus-state");
     const transcriptEl = document.getElementById("nexus-transcript");
+    const dockMic = document.getElementById("dock-mic-btn");
 
     if (stateEl) stateEl.innerText = state;
     if (transcriptEl && transcriptText) transcriptEl.innerText = transcriptText;
 
+    const entityCore = document.getElementById("voice-entity-core");
+    if (entityCore) {
+        entityCore.classList.remove("listening", "thinking", "speaking");
+        if (state === "LISTENING") entityCore.classList.add("listening");
+        else if (state === "THINKING") entityCore.classList.add("thinking");
+        else if (state === "SPEAKING") entityCore.classList.add("speaking");
+    }
+
+    if (dockMic) {
+        if (state === "LISTENING" || isVoiceActive) {
+            dockMic.classList.add("active");
+        } else {
+            dockMic.classList.remove("active");
+        }
+    }
+
     if (stateEl) {
-        if (state === "LISTENING") stateEl.style.color = "#00f0ff";
-        else if (state === "THINKING") stateEl.style.color = "#ffaa00";
-        else if (state === "SPEAKING") stateEl.style.color = "#00ffaa";
-        else stateEl.style.color = "#64748b";
+        if (state === "LISTENING") {
+            stateEl.style.color = "var(--accent-emerald)";
+            stateEl.style.borderColor = "rgba(16, 185, 129, 0.35)";
+            stateEl.style.background = "rgba(16, 185, 129, 0.1)";
+        } else if (state === "THINKING") {
+            stateEl.style.color = "var(--accent-violet)";
+            stateEl.style.borderColor = "rgba(139, 92, 246, 0.35)";
+            stateEl.style.background = "rgba(139, 92, 246, 0.1)";
+        } else if (state === "SPEAKING") {
+            stateEl.style.color = "var(--accent-teal)";
+            stateEl.style.borderColor = "rgba(45, 212, 191, 0.35)";
+            stateEl.style.background = "rgba(45, 212, 191, 0.1)";
+        } else {
+            stateEl.style.color = "var(--accent-cyan)";
+            stateEl.style.borderColor = "rgba(56, 189, 248, 0.25)";
+            stateEl.style.background = "rgba(56, 189, 248, 0.08)";
+        }
     }
 }
 
@@ -773,91 +803,204 @@ function loadSavedEngineConfig() {
 }
 
 /* ==========================================================================
-   11. MINIMALIST LUMINOUS VOICE CORE RENDERER (60 FPS)
+   11. VOLUMETRIC LIQUID PLASMA LIGHT ENTITY (CHATGPT VOICE & HUME STYLE)
    ========================================================================== */
 function initArcReactorCanvas() {
-    const canvas = document.getElementById("arc-canvas");
+    const canvas = document.getElementById("plasma-canvas") || document.getElementById("arc-canvas");
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
 
     const dpi = window.devicePixelRatio || 2;
-    canvas.width = 260 * dpi;
-    canvas.height = 260 * dpi;
+    canvas.width = 440 * dpi;
+    canvas.height = 440 * dpi;
 
-    let angle = 0;
+    let time = 0;
+    let smoothState = {
+        coreRadius: 60,
+        lobeRadius: 75,
+        orbitDist: 32,
+        speed: 1.0,
+        c1: [56, 189, 248],   // Electric Cyan
+        c2: [99, 102, 241],   // Cosmic Indigo
+        c3: [14, 165, 233],   // Sky Blue
+        c4: [139, 92, 246]    // Violet
+    };
+
+    // Ambient floating orbital micro-photons
+    const photons = [];
+    for (let i = 0; i < 16; i++) {
+        photons.push({
+            angle: Math.random() * Math.PI * 2,
+            distance: 50 + Math.random() * 55,
+            speed: (0.003 + Math.random() * 0.006) * (Math.random() > 0.5 ? 1 : -1),
+            size: 1.0 + Math.random() * 2.0,
+            opacity: 0.25 + Math.random() * 0.5
+        });
+    }
+
+    // Outward soft bioluminescent acoustic pulse rings
+    const acousticWaves = [];
 
     function render() {
         ctx.setTransform(dpi, 0, 0, dpi, 0, 0);
-        ctx.clearRect(0, 0, 260, 260);
+        ctx.clearRect(0, 0, 440, 440);
 
-        const cx = 130;
-        const cy = 130;
+        const cx = 220;
+        const cy = 220;
 
-        // 1. Subtle Outer Breathing Halo Ring
-        ctx.save();
-        ctx.translate(cx, cy);
-        ctx.rotate(angle * 0.2);
+        // Determine target parameters based on state
+        let targetCoreR = 58;
+        let targetLobeR = 76;
+        let targetDist = 32;
+        let targetSpeed = 1.0;
+        let targetC1 = [56, 189, 248];  // Cyan
+        let targetC2 = [99, 102, 241];  // Indigo
+        let targetC3 = [14, 165, 233];  // Sky Blue
+        let targetC4 = [139, 92, 246];  // Violet
 
-        const baseColor = isSpeaking 
-            ? "rgba(16, 185, 129," 
-            : (isVoiceActive ? "rgba(56, 189, 248," : "rgba(56, 189, 248,");
+        if (isSpeaking) {
+            targetCoreR = 66 + Math.sin(time * 0.09) * 6;
+            targetLobeR = 88 + Math.cos(time * 0.08) * 8;
+            targetDist = 42 + Math.sin(time * 0.07) * 6;
+            targetSpeed = 2.2;
+            targetC1 = [45, 212, 191];  // Turquoise
+            targetC2 = [56, 189, 248];  // Cyan
+            targetC3 = [16, 185, 129];  // Emerald
+            targetC4 = [99, 102, 241];  // Indigo
 
-        ctx.strokeStyle = `${baseColor} 0.3)`;
-        ctx.lineWidth = 1;
+            if (Math.random() < 0.07 && acousticWaves.length < 5) {
+                acousticWaves.push({ r: 65, opacity: 0.5 });
+            }
+        } else if (isProcessing) {
+            targetCoreR = 62;
+            targetLobeR = 82;
+            targetDist = 38;
+            targetSpeed = 1.8;
+            targetC1 = [168, 85, 247];  // Violet
+            targetC2 = [217, 70, 239];  // Magenta
+            targetC3 = [245, 158, 11];  // Warm Amber
+            targetC4 = [56, 189, 248];  // Cyan
+        } else if (isVoiceActive) {
+            targetCoreR = 64 + Math.sin(time * 0.06) * 4;
+            targetLobeR = 84 + Math.cos(time * 0.05) * 5;
+            targetDist = 36;
+            targetSpeed = 1.5;
+            targetC1 = [16, 185, 129];  // Emerald
+            targetC2 = [45, 212, 191];  // Turquoise
+            targetC3 = [56, 189, 248];  // Cyan
+            targetC4 = [5, 150, 105];   // Deep Mint
+        }
+
+        // Smooth physics interpolation (Spring interpolation)
+        smoothState.coreRadius += (targetCoreR - smoothState.coreRadius) * 0.07;
+        smoothState.lobeRadius += (targetLobeR - smoothState.lobeRadius) * 0.07;
+        smoothState.orbitDist += (targetDist - smoothState.orbitDist) * 0.07;
+        smoothState.speed += (targetSpeed - smoothState.speed) * 0.07;
+
+        for (let i = 0; i < 3; i++) {
+            smoothState.c1[i] += (targetC1[i] - smoothState.c1[i]) * 0.06;
+            smoothState.c2[i] += (targetC2[i] - smoothState.c2[i]) * 0.06;
+            smoothState.c3[i] += (targetC3[i] - smoothState.c3[i]) * 0.06;
+            smoothState.c4[i] += (targetC4[i] - smoothState.c4[i]) * 0.06;
+        }
+
+        const [r1, g1, b1] = smoothState.c1.map(Math.round);
+        const [r2, g2, b2] = smoothState.c2.map(Math.round);
+        const [r3, g3, b3] = smoothState.c3.map(Math.round);
+        const [r4, g4, b4] = smoothState.c4.map(Math.round);
+
+        // Switch to Optical Additive Screen Blending for real light fusion
+        ctx.globalCompositeOperation = "screen";
+
+        // 1. Soft Background Chroma Glow
+        const bgGlow = ctx.createRadialGradient(cx, cy, 20, cx, cy, 180);
+        bgGlow.addColorStop(0, `rgba(${r1}, ${g1}, ${b1}, 0.22)`);
+        bgGlow.addColorStop(0.5, `rgba(${r2}, ${g2}, ${b2}, 0.08)`);
+        bgGlow.addColorStop(1, "rgba(0, 0, 0, 0)");
+        ctx.fillStyle = bgGlow;
         ctx.beginPath();
-        ctx.arc(0, 0, 118, 0, Math.PI * 2);
-        ctx.stroke();
+        ctx.arc(cx, cy, 180, 0, Math.PI * 2);
+        ctx.fill();
 
-        // 4 Subtle Accent Nodes
-        for (let i = 0; i < 4; i++) {
-            const nodeAngle = (i / 4) * Math.PI * 2;
-            ctx.fillStyle = isSpeaking ? "#10b981" : "#38bdf8";
+        // 2. Outward Acoustic Pulse Waves
+        for (let i = acousticWaves.length - 1; i >= 0; i--) {
+            const wave = acousticWaves[i];
+            wave.r += 1.8;
+            wave.opacity -= 0.014;
+            if (wave.opacity <= 0) {
+                acousticWaves.splice(i, 1);
+                continue;
+            }
+            const waveGrad = ctx.createRadialGradient(cx, cy, Math.max(0, wave.r - 15), cx, cy, wave.r + 15);
+            waveGrad.addColorStop(0, `rgba(${r1}, ${g1}, ${b1}, 0)`);
+            waveGrad.addColorStop(0.5, `rgba(${r1}, ${g1}, ${b1}, ${wave.opacity * 0.4})`);
+            waveGrad.addColorStop(1, `rgba(${r1}, ${g1}, ${b1}, 0)`);
+            ctx.fillStyle = waveGrad;
             ctx.beginPath();
-            ctx.arc(Math.cos(nodeAngle) * 118, Math.sin(nodeAngle) * 118, 2, 0, Math.PI * 2);
+            ctx.arc(cx, cy, wave.r + 15, 0, Math.PI * 2);
             ctx.fill();
         }
-        ctx.restore();
 
-        // 2. Fluid Waveform Ripple when Active/Speaking
-        if (isSpeaking || isVoiceActive) {
-            ctx.save();
-            ctx.translate(cx, cy);
-            const numWaves = 36;
-            const radius = 100;
+        // 3. Four Morphing Volumetric Liquid Plasma Lobes
+        const t = time * 0.016 * smoothState.speed;
+        const lobes = [
+            { angle: t * 1.0, distMult: 1.0, rMult: 1.0, color: [r1, g1, b1] },
+            { angle: t * 0.8 + Math.PI * 0.5, distMult: 1.1, rMult: 0.95, color: [r2, g2, b2] },
+            { angle: -t * 0.9 + Math.PI, distMult: 0.9, rMult: 1.05, color: [r3, g3, b3] },
+            { angle: -t * 0.7 + Math.PI * 1.5, distMult: 1.05, rMult: 0.92, color: [r4, g4, b4] }
+        ];
 
-            for (let i = 0; i < numWaves; i++) {
-                const waveAngle = (i / numWaves) * Math.PI * 2 + angle * 0.5;
-                const dynamicLen = isSpeaking
-                    ? 3 + Math.random() * 12
-                    : 2 + Math.sin(angle * 4 + i) * 6;
+        lobes.forEach((lobe, idx) => {
+            const dynamicDist = (smoothState.orbitDist + Math.sin(t * 1.4 + idx) * 8) * lobe.distMult;
+            const lx = cx + Math.cos(lobe.angle) * dynamicDist;
+            const ly = cy + Math.sin(lobe.angle) * dynamicDist;
+            const dynamicR = (smoothState.lobeRadius + Math.cos(t * 1.2 + idx * 2) * 10) * lobe.rMult;
 
-                const x1 = Math.cos(waveAngle) * radius;
-                const y1 = Math.sin(waveAngle) * radius;
-                const x2 = Math.cos(waveAngle) * (radius + dynamicLen);
-                const y2 = Math.sin(waveAngle) * (radius + dynamicLen);
+            const [lr, lg, lb] = lobe.color;
+            const lobeGrad = ctx.createRadialGradient(lx, ly, 0, lx, ly, dynamicR);
+            lobeGrad.addColorStop(0, `rgba(${lr}, ${lg}, ${lb}, 0.85)`);
+            lobeGrad.addColorStop(0.35, `rgba(${lr}, ${lg}, ${lb}, 0.55)`);
+            lobeGrad.addColorStop(0.7, `rgba(${lr}, ${lg}, ${lb}, 0.18)`);
+            lobeGrad.addColorStop(1, "rgba(0, 0, 0, 0)");
 
-                ctx.strokeStyle = isSpeaking ? "rgba(16, 185, 129, 0.85)" : "rgba(56, 189, 248, 0.85)";
-                ctx.lineWidth = 1.5;
-                ctx.beginPath();
-                ctx.moveTo(x1, y1);
-                ctx.lineTo(x2, y2);
-                ctx.stroke();
-            }
-            ctx.restore();
-        }
+            ctx.fillStyle = lobeGrad;
+            ctx.beginPath();
+            ctx.arc(lx, ly, dynamicR, 0, Math.PI * 2);
+            ctx.fill();
+        });
 
-        // 3. Smooth Inner Luminous Ring
-        ctx.save();
-        ctx.translate(cx, cy);
-        const pulse = Math.sin(angle * 2) * 0.2 + 0.6;
-        ctx.strokeStyle = `${baseColor} ${pulse})`;
-        ctx.lineWidth = 1.5;
+        // 4. White-Hot Luminous Core Nucleus (Additive Light Peak)
+        const coreGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, smoothState.coreRadius);
+        coreGrad.addColorStop(0, "rgba(255, 255, 255, 0.96)");
+        coreGrad.addColorStop(0.25, `rgba(224, 242, 254, 0.85)`);
+        coreGrad.addColorStop(0.55, `rgba(${r1}, ${g1}, ${b1}, 0.45)`);
+        coreGrad.addColorStop(0.85, `rgba(${r2}, ${g2}, ${b2}, 0.15)`);
+        coreGrad.addColorStop(1, "rgba(0, 0, 0, 0)");
+
+        ctx.fillStyle = coreGrad;
         ctx.beginPath();
-        ctx.arc(0, 0, 96, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.restore();
+        ctx.arc(cx, cy, smoothState.coreRadius, 0, Math.PI * 2);
+        ctx.fill();
 
-        angle += 0.02;
+        // 5. Drifting Micro-Photons (Living Plasma Stardust)
+        photons.forEach(p => {
+            p.angle += p.speed * smoothState.speed;
+            const px = cx + Math.cos(p.angle) * p.distance;
+            const py = cy + Math.sin(p.angle) * p.distance;
+            const pGrad = ctx.createRadialGradient(px, py, 0, px, py, p.size * 2);
+            pGrad.addColorStop(0, `rgba(255, 255, 255, ${p.opacity})`);
+            pGrad.addColorStop(0.5, `rgba(${r1}, ${g1}, ${b1}, ${p.opacity * 0.6})`);
+            pGrad.addColorStop(1, "rgba(0, 0, 0, 0)");
+            ctx.fillStyle = pGrad;
+            ctx.beginPath();
+            ctx.arc(px, py, p.size * 2, 0, Math.PI * 2);
+            ctx.fill();
+        });
+
+        // Reset composite operation to normal
+        ctx.globalCompositeOperation = "source-over";
+
+        time += 1;
         requestAnimationFrame(render);
     }
 
