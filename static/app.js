@@ -803,7 +803,7 @@ function loadSavedEngineConfig() {
 }
 
 /* ==========================================================================
-   11. ICONIC 3D ISOMETRIC GEOMETRIC AGENT EMBLEM (CODEX / CURSOR STYLE)
+   11. ICONIC CIRCULAR AI AGENT EMBLEM & LIVING QUANTUM ORB (60 FPS)
    ========================================================================== */
 function initArcReactorCanvas() {
     const canvas = document.getElementById("emblem-canvas") || document.getElementById("avatar-optic-canvas") || document.getElementById("plasma-canvas") || document.getElementById("arc-canvas");
@@ -816,21 +816,18 @@ function initArcReactorCanvas() {
     canvas.width = baseW * dpi;
     canvas.height = baseH * dpi;
 
-    let time = 0;
-    let rotX = 0.45;
-    let rotY = 0.3;
-    let rotZ = 0.15;
-    let coreRotY = 0;
-    let coreRotX = 0;
+    const cx = baseW / 2;
+    const cy = baseH / 2;
 
+    let time = 0;
     let mouseOffset = { x: 0, y: 0 };
     let smoothMouse = { x: 0, y: 0 };
 
     window.addEventListener("mousemove", (e) => {
-        const cx = window.innerWidth / 2;
-        const cy = window.innerHeight / 2;
-        mouseOffset.x = Math.max(-1, Math.min(1, (e.clientX - cx) / (cx || 1)));
-        mouseOffset.y = Math.max(-1, Math.min(1, (e.clientY - cy) / (cy || 1)));
+        const winCx = window.innerWidth / 2;
+        const winCy = window.innerHeight / 2;
+        mouseOffset.x = Math.max(-1, Math.min(1, (e.clientX - winCx) / (winCx || 1)));
+        mouseOffset.y = Math.max(-1, Math.min(1, (e.clientY - winCy) / (winCy || 1)));
     });
 
     window.addEventListener("mouseleave", () => {
@@ -838,124 +835,9 @@ function initArcReactorCanvas() {
         mouseOffset.y = 0;
     });
 
-    // Color interpolation
+    // Dynamic state color interpolation
     let smoothColor = [56, 189, 248]; // Cyan
     const waveRings = [];
-
-    // Precompute Trefoil Knot Geometry (Perfect 3-Lobe Centered Symmetry)
-    const N = 120;
-    const R = 38;
-    const ribbonWidth = 13.5;
-    const ribbonHeight = 5.8;
-
-    const knotPoints = [];
-    const tangents = [];
-
-    for (let i = 0; i < N; i++) {
-        const t = (i / N) * Math.PI * 2;
-        const x = (Math.sin(t) + 2 * Math.sin(2 * t)) * R;
-        const y = (Math.cos(t) - 2 * Math.cos(2 * t)) * R;
-        const z = -Math.sin(3 * t) * 0.95 * R;
-        knotPoints.push([x, y, z]);
-
-        const dx = (Math.cos(t) + 4 * Math.cos(2 * t)) * R;
-        const dy = (-Math.sin(t) + 4 * Math.sin(2 * t)) * R;
-        const dz = -3 * Math.cos(3 * t) * 0.95 * R;
-        const len = Math.hypot(dx, dy, dz) || 1;
-        tangents.push([dx / len, dy / len, dz / len]);
-    }
-
-    function dot3(a, b) { return a[0]*b[0] + a[1]*b[1] + a[2]*b[2]; }
-    function cross3(a, b) {
-        return [
-            a[1]*b[2] - a[2]*b[1],
-            a[2]*b[0] - a[0]*b[2],
-            a[0]*b[1] - a[1]*b[0]
-        ];
-    }
-    function norm3(v) {
-        const l = Math.hypot(...v) || 1;
-        return [v[0]/l, v[1]/l, v[2]/l];
-    }
-    function rotateAround(v, axis, angle) {
-        const cosA = Math.cos(angle);
-        const sinA = Math.sin(angle);
-        const d = dot3(axis, v);
-        const c = cross3(axis, v);
-        return [
-            v[0] * cosA + c[0] * sinA + axis[0] * d * (1 - cosA),
-            v[1] * cosA + c[1] * sinA + axis[1] * d * (1 - cosA),
-            v[2] * cosA + c[2] * sinA + axis[2] * d * (1 - cosA)
-        ];
-    }
-
-    // Parallel transport normals
-    const normals = [];
-    normals.push(norm3(cross3([0, 0, 1], tangents[0])));
-
-    for (let i = 0; i < N - 1; i++) {
-        const T1 = tangents[i];
-        const T2 = tangents[i + 1];
-        let A = cross3(T1, T2);
-        const aLen = Math.hypot(...A);
-        if (aLen < 1e-6) {
-            normals.push(normals[i]);
-        } else {
-            A = [A[0]/aLen, A[1]/aLen, A[2]/aLen];
-            const angle = Math.acos(Math.max(-1, Math.min(1, dot3(T1, T2))));
-            normals.push(norm3(rotateAround(normals[i], A, angle)));
-        }
-    }
-
-    // Twist holonomy correction to perfectly close the ribbon
-    let Alast = cross3(tangents[N - 1], tangents[0]);
-    let nFinal = normals[N - 1];
-    const aLenLast = Math.hypot(...Alast);
-    if (aLenLast >= 1e-6) {
-        Alast = [Alast[0]/aLenLast, Alast[1]/aLenLast, Alast[2]/aLenLast];
-        const angle = Math.acos(Math.max(-1, Math.min(1, dot3(tangents[N - 1], tangents[0]))));
-        nFinal = norm3(rotateAround(normals[N - 1], Alast, angle));
-    }
-    const twistDiff = Math.atan2(dot3(cross3(nFinal, normals[0]), tangents[0]), dot3(nFinal, normals[0]));
-    for (let i = 0; i < N; i++) {
-        normals[i] = norm3(rotateAround(normals[i], tangents[i], (i / N) * twistDiff));
-    }
-
-    // Build base mesh slices
-    const baseSlices = [];
-    for (let i = 0; i < N; i++) {
-        const p = knotPoints[i];
-        const n = normals[i];
-        const b = norm3(cross3(tangents[i], n));
-        const w = ribbonWidth;
-        const h = ribbonHeight;
-        baseSlices.push([
-            [p[0] + w*n[0] + h*b[0], p[1] + w*n[1] + h*b[1], p[2] + w*n[2] + h*b[2]],
-            [p[0] - w*n[0] + h*b[0], p[1] - w*n[1] + h*b[1], p[2] - w*n[2] + h*b[2]],
-            [p[0] - w*n[0] - h*b[0], p[1] - w*n[1] - h*b[1], p[2] - w*n[2] - h*b[2]],
-            [p[0] + w*n[0] - h*b[0], p[1] + w*n[1] - h*b[1], p[2] + w*n[2] - h*b[2]]
-        ]);
-    }
-
-    // Core Octahedron Vertices & Faces
-    const coreRadius = 20;
-    const coreVerts = [
-        [0, 0, coreRadius],
-        [0, 0, -coreRadius],
-        [coreRadius, 0, 0],
-        [-coreRadius, 0, 0],
-        [0, coreRadius, 0],
-        [0, -coreRadius, 0]
-    ];
-    const coreFaces = [
-        [0, 2, 4], [0, 4, 3], [0, 3, 5], [0, 5, 2],
-        [1, 4, 2], [1, 3, 4], [1, 5, 3], [1, 2, 5]
-    ];
-
-    // Light source & camera vectors
-    const lightDir = norm3([-0.5, -0.65, 0.58]);
-    const camDir = [0, 0, 1];
-    const halfDir = norm3([lightDir[0] + camDir[0], lightDir[1] + camDir[1], lightDir[2] + camDir[2]]);
 
     function render() {
         ctx.setTransform(dpi, 0, 0, dpi, 0, 0);
@@ -966,21 +848,21 @@ function initArcReactorCanvas() {
 
         // Color target based on state
         let targetColor = [56, 189, 248]; // Cyan (Standby)
-        let rotSpeed = 0.007;
-        let scaleFactor = 1.0;
+        let ampFactor = 1.0;
+        let pulseRate = 0.03;
 
         if (isSpeaking) {
             targetColor = [45, 212, 191]; // Turquoise
-            rotSpeed = 0.012;
-            scaleFactor = 1.04 + Math.sin(time * 0.15) * 0.03;
+            ampFactor = 3.2;
+            pulseRate = 0.08;
         } else if (isProcessing) {
-            targetColor = [168, 85, 247]; // Violet / Iris
-            rotSpeed = 0.024;
-            scaleFactor = 1.02 + Math.sin(time * 0.25) * 0.02;
+            targetColor = [168, 85, 247]; // Violet
+            ampFactor = 2.4;
+            pulseRate = 0.09;
         } else if (isVoiceActive) {
             targetColor = [16, 185, 129]; // Emerald
-            rotSpeed = 0.009;
-            scaleFactor = 1.05 + Math.sin(time * 0.08) * 0.02;
+            ampFactor = 2.0;
+            pulseRate = 0.05;
         }
 
         for (let i = 0; i < 3; i++) {
@@ -988,229 +870,227 @@ function initArcReactorCanvas() {
         }
         const [cr, cg, cb] = smoothColor.map(Math.round);
 
-        // Isometric 3D Rotation angles (Z-axis revolution preserves 3-lobe iconic silhouette)
-        rotZ += rotSpeed;
-        const curRotX = 0.58 + smoothMouse.y * 0.25 + (isProcessing ? Math.sin(time * 0.04) * 0.1 : 0);
-        const curRotY = smoothMouse.x * 0.28;
-        const curRotZ = rotZ;
+        // Dynamic base radius with subtle breathing
+        const breath = Math.sin(time * pulseRate) * (isSpeaking ? 3.5 : 1.8);
+        const baseR = 64 + breath;
 
-        coreRotY -= 0.018;
-        coreRotX += 0.012;
-
-        const cosX = Math.cos(curRotX), sinX = Math.sin(curRotX);
-        const cosY = Math.cos(curRotY), sinY = Math.sin(curRotY);
-        const cosZ = Math.cos(curRotZ), sinZ = Math.sin(curRotZ);
-
-        function project3D(pt, sc = 1.0) {
-            const px = pt[0] * sc;
-            const py = pt[1] * sc;
-            const pz = pt[2] * sc;
-
-            const x1 = px * cosY + pz * sinY;
-            const y1 = py;
-            const z1 = -px * sinY + pz * cosY;
-
-            const x2 = x1;
-            const y2 = y1 * cosX - z1 * sinX;
-            const z2 = y1 * sinX + z1 * cosX;
-
-            const x3 = x2 * cosZ - y2 * sinZ;
-            const y3 = x2 * sinZ + y2 * cosZ;
-            const z3 = z2;
-
-            const fov = 500;
-            const pers = fov / (fov + z3);
-            return [
-                (baseW / 2) + x3 * pers,
-                (baseH / 2) + y3 * pers,
-                z3,
-                [x3, y3, z3]
-            ];
-        }
-
-        // 1. Acoustic Wave Rings when Voice Active or Speaking
-        if ((isVoiceActive || isSpeaking) && time % 36 === 0) {
-            waveRings.push({ r: 50, opacity: 0.8 });
+        // 1. Acoustic Wave Echo Circles (When Voice Active or Speaking)
+        if ((isVoiceActive || isSpeaking) && time % 32 === 0) {
+            waveRings.push({ r: baseR + 8, opacity: 0.75 });
         }
 
         for (let i = waveRings.length - 1; i >= 0; i--) {
             const ring = waveRings[i];
-            ring.r += 1.4;
-            ring.opacity -= 0.018;
+            ring.r += 1.6;
+            ring.opacity -= 0.016;
             if (ring.opacity <= 0) {
                 waveRings.splice(i, 1);
                 continue;
             }
-            ctx.save();
             ctx.beginPath();
-            ctx.arc(baseW / 2, baseH / 2, ring.r, 0, Math.PI * 2);
-            ctx.strokeStyle = `rgba(${cr}, ${cg}, ${cb}, ${ring.opacity * 0.35})`;
-            ctx.lineWidth = 1;
-            ctx.stroke();
-            ctx.restore();
-        }
-
-        // Project all knot vertices
-        const projSlices = [];
-        for (let i = 0; i < N; i++) {
-            const s = baseSlices[i];
-            projSlices.push([
-                project3D(s[0], scaleFactor),
-                project3D(s[1], scaleFactor),
-                project3D(s[2], scaleFactor),
-                project3D(s[3], scaleFactor)
-            ]);
-        }
-
-        // Build polygons to render with depth
-        const polys = [];
-
-        for (let i = 0; i < N; i++) {
-            const next = (i + 1) % N;
-            const s1 = projSlices[i];
-            const s2 = projSlices[next];
-
-            const faces = [
-                [s1[0], s1[1], s2[1], s2[0]], // Top
-                [s1[1], s1[2], s2[2], s2[1]], // Right
-                [s1[2], s1[3], s2[3], s2[2]], // Bottom
-                [s1[3], s1[0], s2[0], s2[3]]  // Left
-            ];
-
-            faces.forEach((f, fIdx) => {
-                const avgZ = (f[0][2] + f[1][2] + f[2][2] + f[3][2]) / 4;
-                const p0 = f[0][3], p1 = f[1][3], p2 = f[2][3];
-                const v1 = [p1[0] - p0[0], p1[1] - p0[1], p1[2] - p0[2]];
-                const v2 = [p2[0] - p0[0], p2[1] - p0[1], p2[2] - p0[2]];
-                const norm = norm3(cross3(v1, v2));
-
-                polys.push({
-                    pts: f,
-                    z: avgZ,
-                    norm: norm,
-                    type: 'ribbon',
-                    sliceIdx: i,
-                    faceIdx: fIdx
-                });
-            });
-        }
-
-        // Project Core Octahedron
-        const cCosX = Math.cos(coreRotX), cSinX = Math.sin(coreRotX);
-        const cCosY = Math.cos(coreRotY), cSinY = Math.sin(coreRotY);
-
-        const projCore = coreVerts.map(v => {
-            const x1 = v[0] * cCosY + v[2] * cSinY;
-            const y1 = v[1];
-            const z1 = -v[0] * cSinY + v[2] * cCosY;
-            const x2 = x1;
-            const y2 = y1 * cCosX - z1 * cSinX;
-            const z2 = y1 * cSinX + z1 * cCosX;
-            const fov = 500;
-            const pers = fov / (fov + z2);
-            return [
-                (baseW / 2) + x2 * pers,
-                (baseH / 2) + y2 * pers,
-                z2,
-                [x2, y2, z2]
-            ];
-        });
-
-        coreFaces.forEach(cf => {
-            const fPts = [projCore[cf[0]], projCore[cf[1]], projCore[cf[2]]];
-            const avgZ = (fPts[0][2] + fPts[1][2] + fPts[2][2]) / 3;
-            const p0 = fPts[0][3], p1 = fPts[1][3], p2 = fPts[2][3];
-            const v1 = [p1[0] - p0[0], p1[1] - p0[1], p1[2] - p0[2]];
-            const v2 = [p2[0] - p0[0], p2[1] - p0[1], p2[2] - p0[2]];
-            const norm = norm3(cross3(v1, v2));
-            polys.push({
-                pts: fPts,
-                z: avgZ,
-                norm: norm,
-                type: 'core'
-            });
-        });
-
-        // Depth Sort: Painter's Algorithm
-        polys.sort((a, b) => b.z - a.z);
-
-        // Render sorted polygons
-        for (let k = 0; k < polys.length; k++) {
-            const poly = polys[k];
-            const pts = poly.pts;
-
-            if (poly.type === 'core') {
-                const diffuse = Math.max(0, dot3(poly.norm, lightDir));
-                ctx.beginPath();
-                ctx.moveTo(pts[0][0], pts[0][1]);
-                ctx.lineTo(pts[1][0], pts[1][1]);
-                ctx.lineTo(pts[2][0], pts[2][1]);
-                ctx.closePath();
-
-                ctx.fillStyle = `rgba(${cr}, ${cg}, ${cb}, ${0.28 + diffuse * 0.38})`;
-                ctx.fill();
-                ctx.strokeStyle = `rgba(255, 255, 255, ${0.6 + diffuse * 0.4})`;
-                ctx.lineWidth = 1.0;
-                ctx.stroke();
-                continue;
-            }
-
-            // Ribbon Face Shading (Anodized Titanium / Obsidian Metamaterial)
-            const diff = Math.max(0, dot3(poly.norm, lightDir));
-            const spec = Math.pow(Math.max(0, dot3(poly.norm, halfDir)), 16);
-
-            const phase = (poly.sliceIdx / N) * Math.PI * 2 + time * 0.03;
-            const waveGlow = Math.sin(phase) * 0.15 + 0.15;
-
-            // Rich multi-tonal shading
-            const ambientR = 14, ambientG = 18, ambientB = 28;
-            const diffR = diff * 42, diffG = diff * 48, diffB = diff * 64;
-            const specR = spec * 200, specG = spec * 215, specB = spec * 240;
-            const tintFactor = 0.12 + diff * 0.22 + waveGlow * 0.18;
-            const tintR = cr * tintFactor;
-            const tintG = cg * tintFactor;
-            const tintB = cb * tintFactor;
-
-            const r = Math.min(255, Math.round(ambientR + diffR + specR + tintR));
-            const g = Math.min(255, Math.round(ambientG + diffG + specG + tintG));
-            const b = Math.min(255, Math.round(ambientB + diffB + specB + tintB));
-
-            ctx.beginPath();
-            ctx.moveTo(pts[0][0], pts[0][1]);
-            for (let p = 1; p < pts.length; p++) {
-                ctx.lineTo(pts[p][0], pts[p][1]);
-            }
-            ctx.closePath();
-
-            ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
-            ctx.fill();
-
-            // Crisp vector edge outline (Codex signature aesthetic)
-            const edgeAlpha = Math.min(0.9, 0.3 + diff * 0.4 + spec * 0.3);
-            ctx.strokeStyle = `rgba(${cr}, ${cg}, ${cb}, ${edgeAlpha})`;
-            ctx.lineWidth = 0.75;
+            ctx.arc(cx, cy, ring.r, 0, Math.PI * 2);
+            ctx.strokeStyle = `rgba(${cr}, ${cg}, ${cb}, ${ring.opacity * 0.4})`;
+            ctx.lineWidth = 1.0;
             ctx.stroke();
         }
 
-        // Render Singularity Core Vertices (Glowing points)
-        projCore.forEach(cv => {
-            ctx.beginPath();
-            ctx.arc(cv[0], cv[1], 2, 0, Math.PI * 2);
-            ctx.fillStyle = "rgba(255, 255, 255, 0.9)";
-            ctx.fill();
-        });
-
-        // Central Quantum Singularity Radiant Point
-        const centerPt = project3D([0, 0, 0]);
-        const singGrad = ctx.createRadialGradient(centerPt[0], centerPt[1], 0, centerPt[0], centerPt[1], 18);
-        singGrad.addColorStop(0, "rgba(255, 255, 255, 1.0)");
-        singGrad.addColorStop(0.35, `rgba(${cr}, ${cg}, ${cb}, 0.75)`);
-        singGrad.addColorStop(1, "rgba(0, 0, 0, 0)");
-
-        ctx.fillStyle = singGrad;
+        // 2. Outer Precision Circular HUD Track (Radius: 136px)
+        const outerTrackR = 136;
         ctx.beginPath();
-        ctx.arc(centerPt[0], centerPt[1], 18, 0, Math.PI * 2);
+        ctx.arc(cx, cy, outerTrackR, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(${cr}, ${cg}, ${cb}, 0.14)`;
+        ctx.lineWidth = 1.0;
+        ctx.stroke();
+
+        // Cardinal Micro-Pips on Outer Track (0°, 90°, 180°, 270°)
+        for (let a = 0; a < 4; a++) {
+            const pipAngle = a * (Math.PI / 2);
+            const px = cx + Math.cos(pipAngle) * outerTrackR;
+            const py = cy + Math.sin(pipAngle) * outerTrackR;
+            ctx.beginPath();
+            ctx.arc(px, py, 1.8, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(${cr}, ${cg}, ${cb}, 0.6)`;
+            ctx.fill();
+        }
+
+        // Smooth Orbital Photon Beacon along Outer Track
+        const beaconAngle = time * 0.018;
+        const bx = cx + Math.cos(beaconAngle) * outerTrackR;
+        const by = cy + Math.sin(beaconAngle) * outerTrackR;
+
+        // Beacon comet tail
+        ctx.beginPath();
+        ctx.arc(cx, cy, outerTrackR, beaconAngle - 0.35, beaconAngle);
+        ctx.strokeStyle = `rgba(${cr}, ${cg}, ${cb}, 0.4)`;
+        ctx.lineWidth = 2.0;
+        ctx.stroke();
+
+        // Beacon head
+        ctx.beginPath();
+        ctx.arc(bx, by, 3, 0, Math.PI * 2);
+        ctx.fillStyle = "#ffffff";
+        ctx.shadowColor = `rgb(${cr}, ${cg}, ${cb})`;
+        ctx.shadowBlur = 10;
         ctx.fill();
+        ctx.shadowBlur = 0;
+
+        // 3. 3D Gyroscopic Circular Gimbal Rings (Parallax Responsive)
+        // Project a 3D circle into 2D screen coordinates
+        function project3DCircle(radius, pitch, yaw, roll) {
+            const numPts = 64;
+            const pts = [];
+            const cosP = Math.cos(pitch), sinP = Math.sin(pitch);
+            const cosY = Math.cos(yaw), sinY = Math.sin(yaw);
+            const cosR = Math.cos(roll), sinR = Math.sin(roll);
+
+            for (let i = 0; i <= numPts; i++) {
+                const a = (i / numPts) * Math.PI * 2;
+                let x = radius * Math.cos(a);
+                let y = radius * Math.sin(a);
+                let z = 0;
+
+                // Roll (Z)
+                let x1 = x * cosR - y * sinR;
+                let y1 = x * sinR + y * cosR;
+                let z1 = z;
+
+                // Pitch (X)
+                let x2 = x1;
+                let y2 = y1 * cosP - z1 * sinP;
+                let z2 = y1 * sinP + z1 * cosP;
+
+                // Yaw (Y)
+                let x3 = x2 * cosY + z2 * sinY;
+                let y3 = y2;
+                let z3 = -x2 * sinY + z2 * cosY;
+
+                const fov = 450;
+                const pers = fov / (fov + z3);
+                pts.push({
+                    sx: cx + x3 * pers,
+                    sy: cy + y3 * pers,
+                    z: z3
+                });
+            }
+            return pts;
+        }
+
+        const ring1Pitch = 0.58 + smoothMouse.y * 0.35;
+        const ring1Yaw = smoothMouse.x * 0.35;
+        const ring1Roll = time * 0.008;
+        const ring1Pts = project3DCircle(114, ring1Pitch, ring1Yaw, ring1Roll);
+
+        const ring2Pitch = -0.45 + smoothMouse.y * 0.3;
+        const ring2Yaw = 0.6 + smoothMouse.x * 0.3;
+        const ring2Roll = -time * 0.012;
+        const ring2Pts = project3DCircle(102, ring2Pitch, ring2Yaw, ring2Roll);
+
+        // Helper to draw segmented 3D circle (back vs front)
+        function drawRingHalf(pts, isBack) {
+            for (let i = 0; i < pts.length - 1; i++) {
+                const p1 = pts[i];
+                const p2 = pts[i + 1];
+                const avgZ = (p1.z + p2.z) / 2;
+                if ((isBack && avgZ > 0) || (!isBack && avgZ <= 0)) {
+                    ctx.beginPath();
+                    ctx.moveTo(p1.sx, p1.sy);
+                    ctx.lineTo(p2.sx, p2.sy);
+                    const alpha = isBack ? 0.18 : (0.45 + (1 - (avgZ + 100) / 200) * 0.4);
+                    ctx.strokeStyle = `rgba(${cr}, ${cg}, ${cb}, ${alpha})`;
+                    ctx.lineWidth = isBack ? 0.8 : 1.25;
+                    ctx.stroke();
+                }
+            }
+        }
+
+        // Draw BACK halves of 3D circular rings (behind the central orb)
+        drawRingHalf(ring1Pts, true);
+        drawRingHalf(ring2Pts, true);
+
+        // 4. Circular Orb Ambient Backlight Glow
+        const ambientGlow = ctx.createRadialGradient(cx, cy, baseR * 0.5, cx, cy, baseR * 1.6);
+        ambientGlow.addColorStop(0, `rgba(${cr}, ${cg}, ${cb}, 0.28)`);
+        ambientGlow.addColorStop(0.5, `rgba(${cr}, ${cg}, ${cb}, 0.08)`);
+        ambientGlow.addColorStop(1, "rgba(0, 0, 0, 0)");
+        ctx.fillStyle = ambientGlow;
+        ctx.beginPath();
+        ctx.arc(cx, cy, baseR * 1.6, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 5. Living Luminous Circular Agent Core (Pristine Circle Geometry)
+        const lightX = cx - 16 + smoothMouse.x * 12;
+        const lightY = cy - 20 + smoothMouse.y * 12;
+
+        const orbGrad = ctx.createRadialGradient(lightX, lightY, 4, cx, cy, baseR);
+        orbGrad.addColorStop(0, "rgba(255, 255, 255, 0.98)");
+        orbGrad.addColorStop(0.18, `rgba(${cr}, ${cg}, ${cb}, 0.88)`);
+        orbGrad.addColorStop(0.52, "rgba(7, 12, 24, 0.92)");
+        orbGrad.addColorStop(0.86, `rgba(${Math.round(cr * 0.45)}, ${Math.round(cg * 0.45)}, ${Math.round(cb * 0.45)}, 0.95)`);
+        orbGrad.addColorStop(1.0, `rgba(${cr}, ${cg}, ${cb}, 0.95)`);
+
+        ctx.beginPath();
+        ctx.arc(cx, cy, baseR, 0, Math.PI * 2);
+        ctx.fillStyle = orbGrad;
+        ctx.fill();
+
+        // Crisp Vector Luminous Circular Perimeter Edge
+        ctx.strokeStyle = `rgba(${cr}, ${cg}, ${cb}, 0.95)`;
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        // 6. Internal Swirling Caustic Rings (Depth within the Circular Lens)
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(cx, cy, baseR, 0, Math.PI * 2);
+        ctx.clip();
+
+        // Caustic Ring 1
+        ctx.beginPath();
+        ctx.ellipse(cx + Math.sin(time * 0.02) * 8, cy + Math.cos(time * 0.02) * 6, baseR * 0.65, baseR * 0.35, time * 0.025, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(255, 255, 255, 0.22)`;
+        ctx.lineWidth = 1.0;
+        ctx.stroke();
+
+        // Caustic Ring 2 (Counter-swirl)
+        ctx.beginPath();
+        ctx.ellipse(cx - Math.cos(time * 0.018) * 8, cy - Math.sin(time * 0.018) * 6, baseR * 0.45, baseR * 0.25, -time * 0.035, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(${cr}, ${cg}, ${cb}, 0.35)`;
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
+
+        // Optical Flare Highlight (Crescent Glass Reflection on Top-Left)
+        const specGrad = ctx.createRadialGradient(lightX, lightY, 0, lightX, lightY, baseR * 0.5);
+        specGrad.addColorStop(0, "rgba(255, 255, 255, 0.75)");
+        specGrad.addColorStop(0.4, `rgba(${cr}, ${cg}, ${cb}, 0.25)`);
+        specGrad.addColorStop(1, "rgba(255, 255, 255, 0)");
+        ctx.fillStyle = specGrad;
+        ctx.beginPath();
+        ctx.arc(lightX, lightY, baseR * 0.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+
+        // 7. Central Quantum Singularity Point (White-Hot Core Beacon)
+        const coreGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, 14);
+        coreGrad.addColorStop(0, "rgba(255, 255, 255, 1.0)");
+        coreGrad.addColorStop(0.35, `rgba(${cr}, ${cg}, ${cb}, 0.85)`);
+        coreGrad.addColorStop(1, "rgba(0, 0, 0, 0)");
+        ctx.fillStyle = coreGrad;
+        ctx.beginPath();
+        ctx.arc(cx, cy, 14, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Delicate Central Star Flare
+        ctx.beginPath();
+        ctx.moveTo(cx - 7, cy); ctx.lineTo(cx + 7, cy);
+        ctx.moveTo(cx, cy - 7); ctx.lineTo(cx, cy + 7);
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.85)";
+        ctx.lineWidth = 1.0;
+        ctx.stroke();
+
+        // 8. Draw FRONT halves of 3D circular rings (overlapping the orb in front)
+        drawRingHalf(ring1Pts, false);
+        drawRingHalf(ring2Pts, false);
 
         time += 1;
         requestAnimationFrame(render);
