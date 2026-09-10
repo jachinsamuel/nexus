@@ -27,15 +27,55 @@ let globalAngle = 0;
    1. INITIALIZATION & LIFECYCLE
    ========================================================================== */
 document.addEventListener("DOMContentLoaded", () => {
-    initCanvasVisualizer();
+    initSplineInteraction();
     initSpeechRecognition();
     initKeyboardShortcuts();
     loadSavedEngineSettings();
 });
 
 /* ==========================================================================
-   2. HOLOGRAPHIC 2D CIRCULAR ACOUSTIC WAVEFORM ENGINE (CANVAS)
+   2. 3D SPLINE ROBOT & INTERACTION ENGINE
    ========================================================================== */
+function initSplineInteraction() {
+    const iframe = document.getElementById("spline-robot-iframe");
+    if (!iframe) return;
+
+    window.addEventListener("mousemove", (e) => {
+        try {
+            if (!iframe.contentDocument) return;
+            const canvas = iframe.contentDocument.getElementById("canvas3d");
+            if (!canvas) return;
+
+            const rect = iframe.getBoundingClientRect();
+            const clientX = e.clientX - rect.left;
+            const clientY = e.clientY - rect.top;
+
+            const pointerEvent = new PointerEvent("pointermove", {
+                bubbles: true,
+                cancelable: true,
+                clientX: clientX,
+                clientY: clientY,
+                screenX: e.screenX,
+                screenY: e.screenY,
+                pointerType: "mouse"
+            });
+            canvas.dispatchEvent(pointerEvent);
+
+            const mouseEvent = new MouseEvent("mousemove", {
+                bubbles: true,
+                cancelable: true,
+                clientX: clientX,
+                clientY: clientY,
+                screenX: e.screenX,
+                screenY: e.screenY
+            });
+            canvas.dispatchEvent(mouseEvent);
+        } catch (err) {
+            // Same origin access safe
+        }
+    });
+}
+
 function initCanvasVisualizer() {
     canvas = document.getElementById("jarvis-core-canvas");
     if (!canvas) return;
@@ -298,7 +338,7 @@ function toggleVoiceMode() {
 function setNexusState(state, statusText) {
     currentState = state;
 
-    const wrapper = document.getElementById("jarvis-canvas-wrapper");
+    const wrapper = document.getElementById("spline-robot-wrapper") || document.getElementById("jarvis-canvas-wrapper");
     const badge = document.getElementById("jarvis-status-badge");
     const statusLabel = document.getElementById("status-text");
     const dot = document.getElementById("system-status-dot");

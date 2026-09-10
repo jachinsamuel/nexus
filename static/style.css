@@ -289,69 +289,80 @@ html, body {
     box-shadow: 0 0 8px var(--accent-cyan);
 }
 
-/* Holographic Canvas Visualizer Container */
-.jarvis-canvas-wrapper {
+/* Interactive Spline 3D Robot Avatar */
+.spline-robot-wrapper {
     position: relative;
-    width: 250px;
-    height: 250px;
+    width: 320px;
+    height: 320px;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    transition: transform 0.3s var(--ease-spring);
+    transition: transform 0.35s var(--ease-spring), filter 0.4s ease, width 0.35s var(--ease-out), height 0.35s var(--ease-out);
     border-radius: 50%;
+    background: radial-gradient(circle, rgba(14, 165, 233, 0.06) 0%, rgba(6, 7, 10, 0.4) 70%, transparent 100%);
+    box-shadow: 0 0 50px rgba(56, 189, 248, 0.15), inset 0 0 25px rgba(56, 189, 248, 0.05);
+    border: 1px solid rgba(56, 189, 248, 0.18);
+    overflow: hidden;
 }
 
-.app-stage.has-thread .jarvis-canvas-wrapper {
-    width: 130px;
-    height: 130px;
+.app-stage.has-thread .spline-robot-wrapper {
+    width: 170px;
+    height: 170px;
 }
 
-.jarvis-canvas-wrapper:hover {
+.spline-robot-wrapper:hover {
     transform: scale(1.04);
+    box-shadow: 0 0 65px rgba(56, 189, 248, 0.3), inset 0 0 35px rgba(56, 189, 248, 0.12);
+    border-color: rgba(56, 189, 248, 0.4);
 }
 
-.jarvis-canvas-wrapper:active {
+.spline-robot-wrapper:active {
     transform: scale(0.97);
 }
 
-#jarvis-core-canvas {
+#spline-robot-iframe {
     width: 100%;
     height: 100%;
-    display: block;
-    filter: drop-shadow(0 0 20px rgba(56, 189, 248, 0.25));
-    transition: filter 0.4s ease;
-}
-
-.jarvis-canvas-wrapper.listening #jarvis-core-canvas {
-    filter: drop-shadow(0 0 26px rgba(16, 185, 129, 0.45));
-}
-
-.jarvis-canvas-wrapper.thinking #jarvis-core-canvas {
-    filter: drop-shadow(0 0 26px rgba(168, 85, 247, 0.45));
-}
-
-.jarvis-canvas-wrapper.speaking #jarvis-core-canvas {
-    filter: drop-shadow(0 0 28px rgba(45, 212, 191, 0.5));
-}
-
-.canvas-hover-ring {
-    position: absolute;
-    inset: -6px;
+    border: none;
     border-radius: 50%;
-    border: 1px dashed rgba(56, 189, 248, 0);
-    transition: all 0.3s ease;
-    pointer-events: none;
+    display: block;
+    background: transparent;
+    pointer-events: auto;
 }
 
-.jarvis-canvas-wrapper:hover .canvas-hover-ring {
-    border-color: rgba(56, 189, 248, 0.35);
-    animation: rotateDashedRing 14s linear infinite;
+/* Voice and Assistant States */
+.spline-robot-wrapper.listening {
+    border-color: rgba(16, 185, 129, 0.5);
+    box-shadow: 0 0 70px rgba(16, 185, 129, 0.35), inset 0 0 30px rgba(16, 185, 129, 0.15);
+    animation: robotBreatheListen 2s ease-in-out infinite;
 }
 
-@keyframes rotateDashedRing {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
+.spline-robot-wrapper.thinking {
+    border-color: rgba(168, 85, 247, 0.55);
+    box-shadow: 0 0 70px rgba(168, 85, 247, 0.38), inset 0 0 30px rgba(168, 85, 247, 0.15);
+    animation: robotBreatheThink 1.4s ease-in-out infinite;
+}
+
+.spline-robot-wrapper.speaking {
+    border-color: rgba(45, 212, 191, 0.6);
+    box-shadow: 0 0 80px rgba(45, 212, 191, 0.45), inset 0 0 35px rgba(45, 212, 191, 0.2);
+    animation: robotBreatheSpeak 1.6s ease-in-out infinite;
+}
+
+@keyframes robotBreatheListen {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.03); }
+}
+
+@keyframes robotBreatheThink {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.025); }
+}
+
+@keyframes robotBreatheSpeak {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.04); }
 }
 
 /* Greeting Headline */
