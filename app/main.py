@@ -90,6 +90,8 @@ class ChatRequest(BaseModel):
     apiKey: Optional[str] = None
     ollamaUrl: Optional[str] = "http://localhost:11434"
     chatModel: str = "qwen2.5-coder:3b"
+    temperature: Optional[float] = 0.7
+    systemPrompt: Optional[str] = None
 
 # API Routes
 @app.get("/api/conversations")
@@ -360,7 +362,8 @@ async def chat_stream(request: ChatRequest, background_tasks: BackgroundTasks):
                 api_key=request.apiKey,
                 ollama_url=request.ollamaUrl or "http://localhost:11434",
                 chat_model=request.chatModel or "qwen2.5-coder:3b",
-                context_str=context_str
+                context_str=context_str,
+                system_prompt=request.systemPrompt
             )
             
             import re

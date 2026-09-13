@@ -8,11 +8,23 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=4">
+    <link rel="stylesheet" href="style.css?v=6">
 </head>
 <body>
-    <!-- Ambient Atmospheric Glow (Pure Dark & Cyan, Zero Green) -->
+    <!-- Ambient Deep Void Atmosphere -->
     <div class="ambient-mesh" id="ambient-mesh"></div>
+
+    <!-- Floating Settings Icon (Sleek Glass Control) -->
+    <button id="btn-settings-trigger" onclick="openSettingsModal()" title="Settings (Press S or Esc)"
+        style="position: fixed; top: 22px; right: 24px; width: 42px; height: 42px; border-radius: 50%; background: rgba(15, 20, 30, 0.75); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.12); color: #94a3b8; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 50; transition: all 0.25s ease; box-shadow: 0 4px 20px rgba(0,0,0,0.5);"
+        onmouseover="this.style.color='#38bdf8'; this.style.borderColor='rgba(56,189,248,0.5)'; this.style.boxShadow='0 0 24px rgba(56,189,248,0.3)';"
+        onmouseout="this.style.color='#94a3b8'; this.style.borderColor='rgba(255,255,255,0.12)'; this.style.boxShadow='0 4px 20px rgba(0,0,0,0.5)';"
+    >
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
+    </button>
 
     <div class="app-layout">
         <!-- Main Stage -->
@@ -64,7 +76,7 @@
         <!-- Minimal Bottom Prompt Dock -->
         <footer class="app-prompt-dock">
             <div class="prompt-capsule">
-                <button class="capsule-mic-btn" id="btn-voice-toggle" onclick="toggleVoiceMode()" title="Voice Mode">
+                <button class="capsule-mic-btn" id="btn-voice-toggle" onclick="toggleVoiceMode()" title="Voice Mode (or Spacebar)">
                     <svg class="mic-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
                         <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
@@ -88,55 +100,266 @@
                         </svg>
                     </button>
                 </form>
-
-                <button class="capsule-settings-btn" id="btn-settings" onclick="openSettingsModal()" title="Settings">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="12" cy="12" r="3"/>
-                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-                    </svg>
-                </button>
             </div>
         </footer>
     </div>
 
-    <!-- Clean Settings Modal -->
+    <!-- Feature-Rich NEXUS Settings Suite -->
     <div class="modal-overlay" id="settings-modal" style="display: none;">
-        <div class="modal-card">
-            <div class="modal-header">
-                <h3 class="modal-title">Settings</h3>
-                <button class="modal-close-btn" onclick="closeSettingsModal()">&times;</button>
+        <div class="settings-modal-card">
+            <!-- Modal Header -->
+            <div class="settings-modal-header">
+                <div class="settings-header-title-group">
+                    <span class="settings-eyebrow">SYSTEM CONFIGURATION</span>
+                    <h2 class="settings-modal-title">NEXUS Settings</h2>
+                </div>
+                <button class="modal-close-btn" onclick="closeSettingsModal()" title="Close (Esc)">&times;</button>
             </div>
 
-            <div class="modal-body">
-                <div class="form-group">
-                    <label class="form-label">AI Provider</label>
-                    <select class="form-select" id="provider-select" onchange="onProviderChanged()">
-                        <option value="ollama">Ollama (Local / Offline)</option>
-                        <option value="openai">OpenAI (GPT-4o)</option>
-                        <option value="anthropic">Anthropic (Claude 3.5)</option>
-                        <option value="groq">Groq (Ultra-Fast Llama)</option>
-                    </select>
+            <!-- Tab Navigation Bar -->
+            <div class="settings-tab-bar">
+                <button class="tab-btn active" onclick="switchSettingsTab('brain', this)">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 9 9M12 3a9 9 0 0 0-9 9"/></svg>
+                    <span>Intelligence</span>
+                </button>
+                <button class="tab-btn" onclick="switchSettingsTab('voice', this)">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/></svg>
+                    <span>Voice & Speech</span>
+                </button>
+                <button class="tab-btn" onclick="switchSettingsTab('automation', this)">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                    <span>Automation</span>
+                </button>
+                <button class="tab-btn" onclick="switchSettingsTab('appearance', this)">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+                    <span>Appearance</span>
+                </button>
+                <button class="tab-btn" onclick="switchSettingsTab('data', this)">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+                    <span>Data & Reset</span>
+                </button>
+            </div>
+
+            <!-- Tab Content Body -->
+            <div class="settings-modal-body">
+                <!-- TAB 1: Intelligence -->
+                <div class="settings-tab-pane active" id="tab-pane-brain">
+                    <div class="form-group">
+                        <label class="form-label">AI Engine Provider</label>
+                        <select class="form-select" id="provider-select" onchange="onProviderChanged()">
+                            <option value="ollama">Ollama (Local / Offline Zero-Latency)</option>
+                            <option value="openai">OpenAI (GPT-4o / o3-mini)</option>
+                            <option value="anthropic">Anthropic (Claude 3.5 Sonnet)</option>
+                            <option value="groq">Groq (Ultra-Fast Llama 3.3)</option>
+                            <option value="deepseek">DeepSeek (DeepSeek-R1 / V3)</option>
+                            <option value="openrouter">OpenRouter (Universal Multi-Model)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group" id="api-key-group" style="display: none;">
+                        <label class="form-label">API Key</label>
+                        <div class="password-input-wrapper">
+                            <input type="password" class="form-input" id="api-key-input" placeholder="sk-...">
+                            <button type="button" class="field-toggle-btn" onclick="togglePasswordVisibility('api-key-input')">Show</button>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Active Model</label>
+                        <input type="text" class="form-input" id="model-input" value="qwen2.5-coder:3b" placeholder="e.g. qwen2.5-coder:3b, gpt-4o, claude-3-5-sonnet">
+                        <div class="model-quick-presets">
+                            <span class="preset-pill" onclick="selectModelPreset('qwen2.5-coder:3b')">qwen2.5-coder:3b</span>
+                            <span class="preset-pill" onclick="selectModelPreset('llama3.2:3b')">llama3.2:3b</span>
+                            <span class="preset-pill" onclick="selectModelPreset('gpt-4o')">gpt-4o</span>
+                            <span class="preset-pill" onclick="selectModelPreset('claude-3-5-sonnet-latest')">claude-3.5-sonnet</span>
+                            <span class="preset-pill" onclick="selectModelPreset('deepseek-r1')">deepseek-r1</span>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <div class="slider-label-row">
+                            <label class="form-label">Creativity / Temperature</label>
+                            <span class="slider-val" id="temp-val-display">0.7</span>
+                        </div>
+                        <input type="range" class="form-range" id="temp-slider" min="0" max="1" step="0.05" value="0.7" oninput="document.getElementById('temp-val-display').innerText = this.value">
+                        <span class="field-help">Lower is precise and factual; higher is creative and expressive.</span>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Persona & System Instructions</label>
+                        <select class="form-select" id="persona-preset-select" onchange="onPersonaPresetChanged()" style="margin-bottom: 8px;">
+                            <option value="default">Cybernetic NEXUS (Helpful, Crisp, Direct)</option>
+                            <option value="concise">Ultra-Concise (1-2 sentence replies only)</option>
+                            <option value="coding">Senior Software Architect (Code-focused)</option>
+                            <option value="jarvis">Tony Stark's JARVIS (Witty, Sophisticated)</option>
+                            <option value="custom">Custom Instructions...</option>
+                        </select>
+                        <textarea class="form-textarea" id="system-persona-input" rows="3" placeholder="Define how NEXUS should think, speak, and act..."></textarea>
+                    </div>
                 </div>
 
-                <div class="form-group" id="api-key-group" style="display: none;">
-                    <label class="form-label">API Key</label>
-                    <input type="password" class="form-input" id="api-key-input" placeholder="sk-...">
+                <!-- TAB 2: Voice & Speech -->
+                <div class="settings-tab-pane" id="tab-pane-voice">
+                    <div class="form-group">
+                        <label class="form-label">Speech Synthesis Voice</label>
+                        <select class="form-select" id="tts-voice-select">
+                            <option value="">System Default Voice</option>
+                        </select>
+                        <span class="field-help">Voices available in your operating system & browser.</span>
+                    </div>
+
+                    <div class="form-group">
+                        <div class="slider-label-row">
+                            <label class="form-label">Speech Speed / Rate</label>
+                            <span class="slider-val" id="speed-val-display">1.0x</span>
+                        </div>
+                        <input type="range" class="form-range" id="tts-speed-slider" min="0.7" max="1.6" step="0.05" value="1.0" oninput="document.getElementById('speed-val-display').innerText = this.value + 'x'">
+                    </div>
+
+                    <div class="form-group">
+                        <div class="slider-label-row">
+                            <label class="form-label">Speech Pitch</label>
+                            <span class="slider-val" id="pitch-val-display">1.0</span>
+                        </div>
+                        <input type="range" class="form-range" id="tts-pitch-slider" min="0.7" max="1.3" step="0.05" value="1.0" oninput="document.getElementById('pitch-val-display').innerText = this.value">
+                    </div>
+
+                    <div class="toggle-row">
+                        <div>
+                            <div class="toggle-title">Auto-Read Responses</div>
+                            <div class="toggle-desc">Automatically speak assistant replies aloud upon receiving them.</div>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="auto-speak-toggle" checked>
+                            <span class="slider-round"></span>
+                        </label>
+                    </div>
+
+                    <div class="form-group" style="margin-top: 12px;">
+                        <label class="form-label">Voice Recognition Language</label>
+                        <select class="form-select" id="stt-lang-select">
+                            <option value="en-US">English (United States)</option>
+                            <option value="en-GB">English (United Kingdom)</option>
+                            <option value="en-IN">English (India)</option>
+                            <option value="en-AU">English (Australia)</option>
+                        </select>
+                    </div>
                 </div>
 
-                <div class="form-group">
-                    <label class="form-label">Model</label>
-                    <input type="text" class="form-input" id="model-input" value="qwen2.5-coder:3b" placeholder="e.g. qwen2.5-coder:3b, gpt-4o">
+                <!-- TAB 3: Automation -->
+                <div class="settings-tab-pane" id="tab-pane-automation">
+                    <div class="toggle-row">
+                        <div>
+                            <div class="toggle-title">Desktop App Launcher</div>
+                            <div class="toggle-desc">Allow NEXUS to launch applications (Chrome, VS Code, Spotify, Notepad, Terminal) via voice or text.</div>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="auto-apps-toggle" checked>
+                            <span class="slider-round"></span>
+                        </label>
+                    </div>
+
+                    <div class="toggle-row">
+                        <div>
+                            <div class="toggle-title">Web Search & Live Retrieval</div>
+                            <div class="toggle-desc">Allow NEXUS to query the web for real-time information, news, and weather.</div>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="auto-web-toggle" checked>
+                            <span class="slider-round"></span>
+                        </label>
+                    </div>
+
+                    <div class="toggle-row">
+                        <div>
+                            <div class="toggle-title">Hardware Telemetry</div>
+                            <div class="toggle-desc">Allow NEXUS to check system CPU, memory, and battery status.</div>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="auto-telemetry-toggle" checked>
+                            <span class="slider-round"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- TAB 4: Appearance -->
+                <div class="settings-tab-pane" id="tab-pane-appearance">
+                    <div class="form-group">
+                        <label class="form-label">Theme Accent Color</label>
+                        <div class="theme-picker-grid">
+                            <div class="theme-option active" data-color="cyan" onclick="selectThemeAccent('cyan', this)">
+                                <span class="theme-dot" style="background: #38bdf8; box-shadow: 0 0 10px #38bdf8;"></span>
+                                <span>Celestial Cyan</span>
+                            </div>
+                            <div class="theme-option" data-color="indigo" onclick="selectThemeAccent('indigo', this)">
+                                <span class="theme-dot" style="background: #818cf8; box-shadow: 0 0 10px #818cf8;"></span>
+                                <span>Quantum Indigo</span>
+                            </div>
+                            <div class="theme-option" data-color="teal" onclick="selectThemeAccent('teal', this)">
+                                <span class="theme-dot" style="background: #2dd4bf; box-shadow: 0 0 10px #2dd4bf;"></span>
+                                <span>Hyper Teal</span>
+                            </div>
+                            <div class="theme-option" data-color="violet" onclick="selectThemeAccent('violet', this)">
+                                <span class="theme-dot" style="background: #c084fc; box-shadow: 0 0 10px #c084fc;"></span>
+                                <span>Deep Violet</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="toggle-row">
+                        <div>
+                            <div class="toggle-title">Robot Cursor Tracking</div>
+                            <div class="toggle-desc">Robot eyes dynamically follow your cursor anywhere across the screen.</div>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="tracking-toggle" checked>
+                            <span class="slider-round"></span>
+                        </label>
+                    </div>
+
+                    <div class="form-group" style="margin-top: 14px;">
+                        <div class="slider-label-row">
+                            <label class="form-label">Ambient Aura Intensity</label>
+                            <span class="slider-val" id="aura-val-display">50%</span>
+                        </div>
+                        <input type="range" class="form-range" id="aura-slider" min="0" max="100" step="5" value="50" oninput="updateAuraIntensity(this.value)">
+                    </div>
+                </div>
+
+                <!-- TAB 5: Data & Reset -->
+                <div class="settings-tab-pane" id="tab-pane-data">
+                    <div class="form-group">
+                        <label class="form-label">Session Management</label>
+                        <p class="field-help" style="margin-bottom: 12px;">Manage local session transcripts and cache.</p>
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                            <button type="button" class="data-action-btn" onclick="exportConversation('markdown')">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                <span>Export Transcript</span>
+                            </button>
+                            <button type="button" class="data-action-btn danger" onclick="clearCurrentConversation()">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                                <span>Clear Conversation</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="margin-top: 20px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.08);">
+                        <label class="form-label" style="color: #ef4444;">Danger Zone</label>
+                        <p class="field-help" style="margin-bottom: 12px;">Reverts all model settings, voice settings, and custom instructions back to defaults.</p>
+                        <button type="button" class="data-action-btn danger" onclick="resetToFactoryDefaults()">Reset All Settings</button>
+                    </div>
                 </div>
             </div>
 
-            <div class="modal-footer">
+            <!-- Modal Footer -->
+            <div class="settings-modal-footer">
                 <span class="save-feedback" id="save-status-msg"></span>
                 <button class="btn-cancel" onclick="closeSettingsModal()">Cancel</button>
-                <button class="btn-save" onclick="saveEngineSettings()">Save</button>
+                <button class="btn-save" onclick="saveAllSettings()">Save Settings</button>
             </div>
         </div>
     </div>
 
-    <script src="app.js"></script>
+    <script src="app.js?v=6"></script>
 </body>
 </html>

@@ -22,6 +22,7 @@ let animFrameId = null;
 let canvas = null;
 let ctx = null;
 let globalAngle = 0;
+let isCursorTrackingEnabled = true;
 
 /* ==========================================================================
    1. INITIALIZATION & LIFECYCLE
@@ -59,6 +60,7 @@ function initSplineInteraction() {
     if (!iframe) return;
 
     window.addEventListener("mousemove", (e) => {
+        if (!isCursorTrackingEnabled) return;
         try {
             if (!iframe.contentDocument) return;
             const canvas = iframe.contentDocument.getElementById("canvas3d");
@@ -274,7 +276,7 @@ function initSpeechRecognition() {
     recognition = new SpeechRecognition();
     recognition.continuous = true;
     recognition.interimResults = false;
-    recognition.lang = "en-US";
+    recognition.lang = localStorage.getItem("nexus_stt_lang") || "en-US";
 
     recognition.onresult = (event) => {
         const last = event.results.length - 1;
@@ -429,7 +431,7 @@ async function processQuery(query) {
             const answer = intentData.message || "Done.";
             currentResponseText = answer;
             streamOutput.innerText = answer;
-            speakText(answer);
+            speakText(answer, true);
             return;
         }
     } catch (err) {
@@ -445,6 +447,8 @@ async function streamIntelligenceResponse(query) {
     const provider = localStorage.getItem("nexus_provider") || "ollama";
     const apiKey = localStorage.getItem("nexus_api_key") || "";
     const model = localStorage.getItem("nexus_model") || "qwen2.5-coder:3b";
+    const temp = parseFloat(localStorage.getItem("nexus_temp") || "0.7");
+    const personaText = localStorage.getItem("nexus_persona_text") || "";
 
     try {
         const res = await fetch("/api/stream", {
@@ -454,7 +458,9 @@ async function streamIntelligenceResponse(query) {
                 query: query,
                 provider: provider,
                 apiKey: apiKey,
-                chatModel: model
+                chatModel: model,
+                temperature: temp,
+                systemPrompt: personaText
             })
         });
 
@@ -485,7 +491,7 @@ async function streamIntelligenceResponse(query) {
         }
 
         currentResponseText = fullText;
-        speakText(fullText);
+        speakText(fullText, true);
 
     } catch (err) {
         streamOutput.innerText = `Error: ${err.message}`;
@@ -502,6 +508,12 @@ function getPreferredVoice() {
     const voices = synth.getVoices();
     if (!voices || voices.length === 0) return null;
 
+    const savedVoiceURI = localStorage.getItem("nexus_tts_voice_uri");
+    if (savedVoiceURI) {
+        const match = voices.find(v => v.voiceURI === savedVoiceURI);
+        if (match) return match;
+    }
+
     const priorityNames = ["david", "george", "guy", "daniel", "james", "oliver", "alex"];
     for (const name of priorityNames) {
         const match = voices.find(v => v.name.toLowerCase().includes(name));
@@ -510,7 +522,7 @@ function getPreferredVoice() {
     return voices.find(v => v.lang.startsWith("en")) || voices[0];
 }
 
-function speakText(text) {
+function speakText(text, isAuto = false) {
     if (!synth || !text) {
         isProcessing = false;
         if (isVoiceActive) {
@@ -524,6 +536,23 @@ function speakText(text) {
         return;
     }
 
+    // If triggered automatically after response and user turned off auto-read
+    if (isAuto) {
+        const autoSpeak = localStorage.getItem("nexus_auto_speak");
+        if (autoSpeak === "false") {
+            isProcessing = false;
+            if (isVoiceActive) {
+                setNexusState("LISTENING", "Listening...");
+                if (recognition) {
+                    try { recognition.start(); } catch (e) {}
+                }
+            } else {
+                setNexusState("STANDBY", "Ready");
+            }
+            return;
+        }
+    }
+
     synth.cancel();
 
     const cleanSpeech = text
@@ -533,8 +562,11 @@ function speakText(text) {
         .replace(/\n+/g, '. ');
 
     const utterance = new SpeechSynthesisUtterance(cleanSpeech);
-    utterance.rate = 1.0;
-    utterance.pitch = 0.95;
+
+    const rate = parseFloat(localStorage.getItem("nexus_tts_speed") || "1.0");
+    const pitch = parseFloat(localStorage.getItem("nexus_tts_pitch") || "1.0");
+    utterance.rate = isNaN(rate) ? 1.0 : rate;
+    utterance.pitch = isNaN(pitch) ? 1.0 : pitch;
 
     const voice = getPreferredVoice();
     if (voice) utterance.voice = voice;
@@ -571,7 +603,7 @@ function speakText(text) {
 
 function speakCurrentResponse() {
     if (currentResponseText) {
-        speakText(currentResponseText);
+        speakText(currentResponseText, false);
     }
 }
 
@@ -601,11 +633,14 @@ function resetConversation() {
 }
 
 /* ==========================================================================
-   7. SETTINGS MODAL & CONFIGURATION
+   7. ADVANCED SETTINGS SUITE & CONFIGURATION
    ========================================================================== */
 function openSettingsModal() {
     const modal = document.getElementById("settings-modal");
-    if (modal) modal.style.display = "flex";
+    if (modal) {
+        modal.style.display = "flex";
+        populateVoiceList();
+    }
 }
 
 function closeSettingsModal() {
@@ -613,59 +648,300 @@ function closeSettingsModal() {
     if (modal) modal.style.display = "none";
 }
 
+function switchSettingsTab(tabName, btnEl) {
+    document.querySelectorAll(".settings-tab-bar .tab-btn").forEach(btn => btn.classList.remove("active"));
+    if (btnEl) btnEl.classList.add("active");
+
+    document.querySelectorAll(".settings-tab-pane").forEach(pane => pane.classList.remove("active"));
+    const targetPane = document.getElementById(`tab-pane-${tabName}`);
+    if (targetPane) targetPane.classList.add("active");
+}
+
 function onProviderChanged() {
-    const prov = document.getElementById("provider-select").value;
+    const prov = document.getElementById("provider-select")?.value || "ollama";
     const keyGroup = document.getElementById("api-key-group");
     if (keyGroup) {
         keyGroup.style.display = prov === "ollama" ? "none" : "flex";
     }
 }
 
-function saveEngineSettings() {
-    const prov = document.getElementById("provider-select").value;
-    const key = document.getElementById("api-key-input").value.trim();
-    const model = document.getElementById("model-input").value.trim();
+function togglePasswordVisibility(inputId) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    const isPass = input.type === "password";
+    input.type = isPass ? "text" : "password";
+    const btn = input.parentElement?.querySelector(".field-toggle-btn");
+    if (btn) btn.innerText = isPass ? "Hide" : "Show";
+}
 
-    localStorage.setItem("nexus_provider", prov);
-    localStorage.setItem("nexus_api_key", key);
-    localStorage.setItem("nexus_model", model);
+function selectModelPreset(modelName) {
+    const input = document.getElementById("model-input");
+    if (input) input.value = modelName;
+}
 
-    updateHeaderModelBadge(prov, model);
+function onPersonaPresetChanged() {
+    const sel = document.getElementById("persona-preset-select");
+    const textarea = document.getElementById("system-persona-input");
+    if (!sel || !textarea) return;
 
+    const presets = {
+        default: "You are NEXUS, an ultra-advanced cybernetic artificial intelligence companion. Be concise, direct, helpful, and insightful. Avoid conversational filler.",
+        concise: "Provide ultra-concise, rapid-fire responses. Keep answers strictly under 2 sentences unless complex code or structured data is explicitly requested.",
+        coding: "Act as an elite Staff Software Engineer and System Architect. Provide robust, production-grade code, optimal algorithms, and precise architectural rationale.",
+        jarvis: "You are Stark Industries' J.A.R.V.I.S. Address the user with supreme wit, polite British sophistication, and unflappable competence. Call the user 'Sir'."
+    };
+
+    if (presets[sel.value]) {
+        textarea.value = presets[sel.value];
+    }
+}
+
+function populateVoiceList() {
+    if (!synth) return;
+    const voiceSelect = document.getElementById("tts-voice-select");
+    if (!voiceSelect) return;
+
+    const voices = synth.getVoices();
+    if (!voices || voices.length === 0) return;
+
+    const savedVoiceURI = localStorage.getItem("nexus_tts_voice_uri") || "";
+    voiceSelect.innerHTML = `<option value="">System Default Voice</option>`;
+
+    voices.forEach(v => {
+        const opt = document.createElement("option");
+        opt.value = v.voiceURI;
+        opt.innerText = `${v.name} (${v.lang})${v.default ? ' — Default' : ''}`;
+        if (v.voiceURI === savedVoiceURI) opt.selected = true;
+        voiceSelect.appendChild(opt);
+    });
+}
+
+if (window.speechSynthesis) {
+    window.speechSynthesis.onvoiceschanged = populateVoiceList;
+}
+
+const THEME_ACCENTS = {
+    cyan: { accent: "#38bdf8", glow: "rgba(56, 189, 248, 0.3)" },
+    indigo: { accent: "#818cf8", glow: "rgba(129, 140, 248, 0.3)" },
+    teal: { accent: "#2dd4bf", glow: "rgba(45, 212, 191, 0.3)" },
+    violet: { accent: "#c084fc", glow: "rgba(192, 132, 252, 0.3)" }
+};
+
+function applyThemeAccent(colorName) {
+    const theme = THEME_ACCENTS[colorName] || THEME_ACCENTS.cyan;
+    document.documentElement.style.setProperty("--accent-cyan", theme.accent);
+    document.documentElement.style.setProperty("--border-glow", theme.glow);
+    localStorage.setItem("nexus_theme_accent", colorName);
+}
+
+function selectThemeAccent(colorName, el) {
+    document.querySelectorAll(".theme-option").forEach(opt => opt.classList.remove("active"));
+    if (el) el.classList.add("active");
+    applyThemeAccent(colorName);
+}
+
+function updateAuraIntensity(val) {
+    const display = document.getElementById("aura-val-display");
+    if (display) display.innerText = `${val}%`;
+    const mesh = document.getElementById("ambient-mesh");
+    if (mesh) {
+        const alpha = (parseFloat(val) / 100) * 0.12;
+        mesh.style.background = `radial-gradient(circle at 50% 40%, rgba(56, 189, 248, ${alpha}) 0%, transparent 65%)`;
+    }
+    localStorage.setItem("nexus_aura_intensity", val);
+}
+
+function exportConversation(format = "markdown") {
+    const userQuery = document.getElementById("user-query-text")?.innerText || "";
+    const reply = document.getElementById("stream-output-text")?.innerText || currentResponseText || "";
+
+    if (!userQuery && !reply) {
+        alert("No active session transcript to export.");
+        return;
+    }
+
+    const dateStr = new Date().toISOString().replace(/[:.]/g, "-");
+    const content = `# NEXUS Intelligence Transcript\n**Date:** ${new Date().toLocaleString()}\n\n---\n\n### User\n${userQuery}\n\n### NEXUS\n${reply}\n`;
+    
+    const blob = new Blob([content], { type: "text/markdown;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `nexus_transcript_${dateStr}.md`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+function clearCurrentConversation() {
+    closeChatThread();
+    const input = document.getElementById("prompt-input");
+    if (input) input.value = "";
+    currentResponseText = "";
     const feedback = document.getElementById("save-status-msg");
     if (feedback) {
-        feedback.innerText = "Saved";
+        feedback.innerText = "Session cleared ✓";
+        setTimeout(() => { feedback.innerText = ""; }, 1200);
+    }
+}
+
+function resetToFactoryDefaults() {
+    if (!confirm("Reset all NEXUS settings to default?")) return;
+    localStorage.clear();
+    loadSavedEngineSettings();
+    const feedback = document.getElementById("save-status-msg");
+    if (feedback) {
+        feedback.innerText = "Restored defaults ✓";
         setTimeout(() => {
             feedback.innerText = "";
             closeSettingsModal();
         }, 800);
+    }
+}
+
+function saveAllSettings() {
+    // 1. Intelligence
+    const prov = document.getElementById("provider-select")?.value || "ollama";
+    const key = document.getElementById("api-key-input")?.value.trim() || "";
+    const model = document.getElementById("model-input")?.value.trim() || "qwen2.5-coder:3b";
+    const temp = document.getElementById("temp-slider")?.value || "0.7";
+    const personaPreset = document.getElementById("persona-preset-select")?.value || "default";
+    const personaText = document.getElementById("system-persona-input")?.value.trim() || "";
+
+    localStorage.setItem("nexus_provider", prov);
+    localStorage.setItem("nexus_api_key", key);
+    localStorage.setItem("nexus_model", model);
+    localStorage.setItem("nexus_temp", temp);
+    localStorage.setItem("nexus_persona_preset", personaPreset);
+    localStorage.setItem("nexus_persona_text", personaText);
+
+    // 2. Voice & Speech
+    const voiceURI = document.getElementById("tts-voice-select")?.value || "";
+    const speed = document.getElementById("tts-speed-slider")?.value || "1.0";
+    const pitch = document.getElementById("tts-pitch-slider")?.value || "1.0";
+    const autoSpeak = document.getElementById("auto-speak-toggle")?.checked ? "true" : "false";
+    const sttLang = document.getElementById("stt-lang-select")?.value || "en-US";
+
+    localStorage.setItem("nexus_tts_voice_uri", voiceURI);
+    localStorage.setItem("nexus_tts_speed", speed);
+    localStorage.setItem("nexus_tts_pitch", pitch);
+    localStorage.setItem("nexus_auto_speak", autoSpeak);
+    localStorage.setItem("nexus_stt_lang", sttLang);
+
+    if (recognition) {
+        recognition.lang = sttLang;
+    }
+
+    // 3. Automation
+    const autoApps = document.getElementById("auto-apps-toggle")?.checked ? "true" : "false";
+    const autoWeb = document.getElementById("auto-web-toggle")?.checked ? "true" : "false";
+    const autoTelem = document.getElementById("auto-telemetry-toggle")?.checked ? "true" : "false";
+
+    localStorage.setItem("nexus_auto_apps", autoApps);
+    localStorage.setItem("nexus_auto_web", autoWeb);
+    localStorage.setItem("nexus_auto_telemetry", autoTelem);
+
+    // 4. Appearance
+    const tracking = document.getElementById("tracking-toggle")?.checked ? "true" : "false";
+    const aura = document.getElementById("aura-slider")?.value || "50";
+
+    localStorage.setItem("nexus_tracking", tracking);
+    isCursorTrackingEnabled = tracking === "true";
+
+    localStorage.setItem("nexus_aura_intensity", aura);
+    updateAuraIntensity(aura);
+
+    const feedback = document.getElementById("save-status-msg");
+    if (feedback) {
+        feedback.innerText = "Settings Saved ✓";
+        setTimeout(() => {
+            feedback.innerText = "";
+            closeSettingsModal();
+        }, 700);
     } else {
         closeSettingsModal();
     }
 }
 
 function loadSavedEngineSettings() {
+    // 1. Intelligence
     const prov = localStorage.getItem("nexus_provider") || "ollama";
     const key = localStorage.getItem("nexus_api_key") || "";
     const model = localStorage.getItem("nexus_model") || "qwen2.5-coder:3b";
+    const temp = localStorage.getItem("nexus_temp") || "0.7";
+    const personaPreset = localStorage.getItem("nexus_persona_preset") || "default";
+    const personaText = localStorage.getItem("nexus_persona_text") || "You are NEXUS, an ultra-advanced cybernetic artificial intelligence companion. Be concise, direct, helpful, and insightful. Avoid conversational filler.";
 
     const provSelect = document.getElementById("provider-select");
     const keyInput = document.getElementById("api-key-input");
     const modelInput = document.getElementById("model-input");
+    const tempSlider = document.getElementById("temp-slider");
+    const tempDisplay = document.getElementById("temp-val-display");
+    const personaSelect = document.getElementById("persona-preset-select");
+    const personaInput = document.getElementById("system-persona-input");
 
     if (provSelect) provSelect.value = prov;
     if (keyInput) keyInput.value = key;
     if (modelInput) modelInput.value = model;
+    if (tempSlider) tempSlider.value = temp;
+    if (tempDisplay) tempDisplay.innerText = temp;
+    if (personaSelect) personaSelect.value = personaPreset;
+    if (personaInput) personaInput.value = personaText;
 
     onProviderChanged();
-    updateHeaderModelBadge(prov, model);
-}
 
-function updateHeaderModelBadge(prov, model) {
-    const badge = document.getElementById("active-model-name");
-    if (badge) {
-        badge.innerText = `${prov} // ${model}`;
-    }
+    // 2. Voice
+    populateVoiceList();
+    const speed = localStorage.getItem("nexus_tts_speed") || "1.0";
+    const pitch = localStorage.getItem("nexus_tts_pitch") || "1.0";
+    const autoSpeak = localStorage.getItem("nexus_auto_speak") !== "false";
+    const sttLang = localStorage.getItem("nexus_stt_lang") || "en-US";
+
+    const speedSlider = document.getElementById("tts-speed-slider");
+    const speedDisplay = document.getElementById("speed-val-display");
+    const pitchSlider = document.getElementById("tts-pitch-slider");
+    const pitchDisplay = document.getElementById("pitch-val-display");
+    const autoSpeakToggle = document.getElementById("auto-speak-toggle");
+    const sttLangSelect = document.getElementById("stt-lang-select");
+
+    if (speedSlider) speedSlider.value = speed;
+    if (speedDisplay) speedDisplay.innerText = `${speed}x`;
+    if (pitchSlider) pitchSlider.value = pitch;
+    if (pitchDisplay) pitchDisplay.innerText = pitch;
+    if (autoSpeakToggle) autoSpeakToggle.checked = autoSpeak;
+    if (sttLangSelect) sttLangSelect.value = sttLang;
+    if (recognition) recognition.lang = sttLang;
+
+    // 3. Automation
+    const autoApps = localStorage.getItem("nexus_auto_apps") !== "false";
+    const autoWeb = localStorage.getItem("nexus_auto_web") !== "false";
+    const autoTelem = localStorage.getItem("nexus_auto_telemetry") !== "false";
+
+    const autoAppsToggle = document.getElementById("auto-apps-toggle");
+    const autoWebToggle = document.getElementById("auto-web-toggle");
+    const autoTelemToggle = document.getElementById("auto-telemetry-toggle");
+
+    if (autoAppsToggle) autoAppsToggle.checked = autoApps;
+    if (autoWebToggle) autoWebToggle.checked = autoWeb;
+    if (autoTelemToggle) autoTelemToggle.checked = autoTelem;
+
+    // 4. Appearance
+    const themeAccent = localStorage.getItem("nexus_theme_accent") || "cyan";
+    applyThemeAccent(themeAccent);
+    document.querySelectorAll(".theme-option").forEach(opt => {
+        opt.classList.toggle("active", opt.getAttribute("data-color") === themeAccent);
+    });
+
+    const tracking = localStorage.getItem("nexus_tracking") !== "false";
+    isCursorTrackingEnabled = tracking;
+    const trackingToggle = document.getElementById("tracking-toggle");
+    if (trackingToggle) trackingToggle.checked = tracking;
+
+    const aura = localStorage.getItem("nexus_aura_intensity") || "50";
+    const auraSlider = document.getElementById("aura-slider");
+    if (auraSlider) auraSlider.value = aura;
+    updateAuraIntensity(aura);
 }
 
 /* ==========================================================================
@@ -673,7 +949,8 @@ function updateHeaderModelBadge(prov, model) {
    ========================================================================== */
 function initKeyboardShortcuts() {
     window.addEventListener("keydown", (e) => {
-        if (e.code === "Space" && document.activeElement.id !== "prompt-input") {
+        // Spacebar to talk when not typing in input/textarea
+        if (e.code === "Space" && document.activeElement.tagName !== "INPUT" && document.activeElement.tagName !== "TEXTAREA") {
             const isModalOpen = document.getElementById("settings-modal")?.style.display === "flex";
             if (!isModalOpen) {
                 e.preventDefault();
@@ -681,6 +958,16 @@ function initKeyboardShortcuts() {
             }
         }
 
+        // 'S' key to open settings when not typing
+        if ((e.key === "s" || e.key === "S") && document.activeElement.tagName !== "INPUT" && document.activeElement.tagName !== "TEXTAREA") {
+            const isModalOpen = document.getElementById("settings-modal")?.style.display === "flex";
+            if (!isModalOpen) {
+                e.preventDefault();
+                openSettingsModal();
+            }
+        }
+
+        // Escape to close modal or active thread
         if (e.key === "Escape") {
             const settingsModal = document.getElementById("settings-modal");
             if (settingsModal && settingsModal.style.display === "flex") {
