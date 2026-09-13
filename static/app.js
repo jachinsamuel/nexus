@@ -67,14 +67,23 @@ function initSplineInteraction() {
             if (!canvas) return;
 
             const rect = iframe.getBoundingClientRect();
-            const clientX = e.clientX - rect.left;
-            const clientY = e.clientY - rect.top;
+            // Calculate cursor offset relative to iframe center
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+
+            // Normalized screen-wide direction (-1 to +1 from center)
+            const normX = (e.clientX - centerX) / (window.innerWidth / 2);
+            const normY = (e.clientY - centerY) / (window.innerHeight / 2);
+
+            // Map smoothly to canvas dimensions so look-at tracking remains active anywhere on screen
+            const targetX = rect.width / 2 + normX * (rect.width * 0.45);
+            const targetY = rect.height / 2 + normY * (rect.height * 0.45);
 
             const pointerEvent = new PointerEvent("pointermove", {
                 bubbles: true,
                 cancelable: true,
-                clientX: clientX,
-                clientY: clientY,
+                clientX: targetX,
+                clientY: targetY,
                 screenX: e.screenX,
                 screenY: e.screenY,
                 pointerType: "mouse"
@@ -84,14 +93,14 @@ function initSplineInteraction() {
             const mouseEvent = new MouseEvent("mousemove", {
                 bubbles: true,
                 cancelable: true,
-                clientX: clientX,
-                clientY: clientY,
+                clientX: targetX,
+                clientY: targetY,
                 screenX: e.screenX,
                 screenY: e.screenY
             });
             canvas.dispatchEvent(mouseEvent);
         } catch (err) {
-            // Same origin access safe
+            // Safe cross-frame interaction
         }
     });
 }
@@ -467,17 +476,21 @@ async function streamIntelligenceResponse(query) {
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
         let fullText = "";
+        let buffer = "";
 
         while (true) {
             const { value, done } = await reader.read();
             if (done) break;
 
-            const chunk = decoder.decode(value, { stream: true });
-            const lines = chunk.split("\n");
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split("\n");
+            // Keep the last potentially incomplete line in the buffer
+            buffer = lines.pop() || "";
 
             for (const line of lines) {
-                if (line.startsWith("data: ")) {
-                    const dataStr = line.slice(6).trim();
+                const trimmed = line.trim();
+                if (trimmed.startsWith("data: ")) {
+                    const dataStr = trimmed.slice(6).trim();
                     if (!dataStr || dataStr === "{}") continue;
                     try {
                         const token = JSON.parse(dataStr);
@@ -487,6 +500,20 @@ async function streamIntelligenceResponse(query) {
                         }
                     } catch (e) {}
                 }
+            }
+        }
+
+        // Process any leftover line
+        if (buffer.trim().startsWith("data: ")) {
+            const dataStr = buffer.trim().slice(6).trim();
+            if (dataStr && dataStr !== "{}") {
+                try {
+                    const token = JSON.parse(dataStr);
+                    if (typeof token === "string") {
+                        fullText += token;
+                        streamOutput.innerText = fullText;
+                    }
+                } catch (e) {}
             }
         }
 

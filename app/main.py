@@ -377,8 +377,9 @@ async def chat_stream(request: ChatRequest, background_tasks: BackgroundTasks):
             db.add_message(conv_id, "assistant", full_response)
         except Exception as e:
             yield f"event: error\ndata: {json.dumps(str(e))}\n\n"
-            
         yield "event: done\ndata: {}\n\n"
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 # Multi-Agent Orchestration Endpoint (CrewAI / AutoGPT / LangChain)
 @app.post("/api/agents/orchestrate")

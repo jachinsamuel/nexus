@@ -120,13 +120,14 @@ html, body {
     border-radius: 0;
     box-shadow: none;
     overflow: visible;
-    transition: transform 0.35s var(--ease-spring);
+    transition: all 0.35s var(--ease-spring);
 }
 
 /* Keep the 3D robot comfortable and uncropped at all times */
 .app-stage.has-thread .spline-robot-wrapper {
-    width: 360px;
-    height: 360px;
+    width: 380px;
+    height: 380px;
+    max-width: 90vw;
 }
 
 .spline-robot-wrapper:hover {
