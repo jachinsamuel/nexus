@@ -31,7 +31,25 @@ document.addEventListener("DOMContentLoaded", () => {
     initSpeechRecognition();
     initKeyboardShortcuts();
     loadSavedEngineSettings();
+    updateGreeting();
 });
+
+function updateGreeting() {
+    const greetingEl = document.getElementById("nexus-greeting") || document.getElementById("jarvis-greeting");
+    if (!greetingEl) return;
+    const hour = new Date().getHours();
+    let timeGreeting = "How can I help?";
+    if (hour >= 5 && hour < 12) {
+        timeGreeting = "Good morning, how can I help?";
+    } else if (hour >= 12 && hour < 17) {
+        timeGreeting = "Good afternoon, how can I help?";
+    } else if (hour >= 17 && hour < 22) {
+        timeGreeting = "Good evening, how can I help?";
+    } else {
+        timeGreeting = "Hello, how can I help?";
+    }
+    greetingEl.innerText = timeGreeting;
+}
 
 /* ==========================================================================
    2. 3D SPLINE ROBOT & INTERACTION ENGINE
@@ -338,40 +356,29 @@ function toggleVoiceMode() {
 function setNexusState(state, statusText) {
     currentState = state;
 
-    const wrapper = document.getElementById("spline-robot-wrapper") || document.getElementById("jarvis-canvas-wrapper");
-    const badge = document.getElementById("jarvis-status-badge");
-    const statusLabel = document.getElementById("status-text");
-    const dot = document.getElementById("system-status-dot");
+    const wrapper = document.getElementById("spline-robot-wrapper");
     const micBtn = document.getElementById("btn-voice-toggle");
     const mesh = document.getElementById("ambient-mesh");
 
     if (wrapper) wrapper.classList.remove("listening", "thinking", "speaking");
-    if (badge) badge.classList.remove("listening", "thinking", "speaking");
 
     if (state === "LISTENING") {
         if (wrapper) wrapper.classList.add("listening");
-        if (badge) badge.classList.add("listening");
-        if (dot) dot.classList.add("active");
         if (micBtn) micBtn.classList.add("active");
-        if (mesh) mesh.style.background = "radial-gradient(circle at 50% 36%, rgba(16, 185, 129, 0.12) 0%, transparent 60%)";
+        if (mesh) mesh.style.background = "radial-gradient(circle at 50% 40%, rgba(56, 189, 248, 0.08) 0%, transparent 60%)";
     } else if (state === "THINKING") {
         if (wrapper) wrapper.classList.add("thinking");
-        if (badge) badge.classList.add("thinking");
         if (micBtn) micBtn.classList.remove("active");
-        if (mesh) mesh.style.background = "radial-gradient(circle at 50% 36%, rgba(168, 85, 247, 0.12) 0%, transparent 60%)";
+        if (mesh) mesh.style.background = "radial-gradient(circle at 50% 40%, rgba(56, 189, 248, 0.06) 0%, transparent 60%)";
     } else if (state === "SPEAKING") {
         if (wrapper) wrapper.classList.add("speaking");
-        if (badge) badge.classList.add("speaking");
         if (micBtn) micBtn.classList.remove("active");
-        if (mesh) mesh.style.background = "radial-gradient(circle at 50% 36%, rgba(45, 212, 191, 0.14) 0%, transparent 60%)";
+        if (mesh) mesh.style.background = "radial-gradient(circle at 50% 40%, rgba(56, 189, 248, 0.09) 0%, transparent 60%)";
     } else {
         // STANDBY
-        if (dot) dot.classList.remove("active");
         if (micBtn) micBtn.classList.remove("active");
-        if (mesh) mesh.style.background = "radial-gradient(circle at 50% 36%, rgba(14, 165, 233, 0.09) 0%, transparent 55%)";
+        if (mesh) mesh.style.background = "radial-gradient(circle at 50% 40%, rgba(56, 189, 248, 0.05) 0%, transparent 55%)";
     }
-
-    if (statusLabel && statusText) statusLabel.innerText = statusText;
 }
 
 /* ==========================================================================
