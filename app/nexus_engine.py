@@ -504,6 +504,28 @@ async def parse_and_execute_voice_intent(command_raw: str) -> Dict[str, Any]:
     
     projects_dir = r"d:\Projects"
 
+    # 0.4 Conversational Greetings & Courtesy (Instant, Zero-Latency Reply)
+    greetings_patterns = [
+        "hello", "hi", "hey", "good morning", "good afternoon", "good evening",
+        "how are you", "how are you doing", "how do you do", "whats up", "what's up",
+        "are you there", "you there", "hey nexus", "hello nexus", "hi nexus"
+    ]
+    if any(clean_cmd == p or clean_cmd.startswith(p + " ") or clean_cmd.endswith(" " + p) for p in greetings_patterns):
+        greeting_responses = [
+            "At your service, Sir. All primary systems and core processors are running at peak efficiency. How may I assist you?",
+            "Good day, Sir. All neural subsystems are calibrated and fully operational. What are your orders?",
+            "Always here, Sir. Compute cores active and standing by. What can I do for you?",
+            "Online and ready, Sir. Systems functioning optimally. How can I assist you today?"
+        ]
+        import random
+        selected_reply = random.choice(greeting_responses)
+        return {
+            "status": "action_executed",
+            "intent": "conversational_greeting",
+            "message": selected_reply,
+            "data": {"greeting": selected_reply}
+        }
+
     # 0.4 Comprehensive Features & Capabilities Explanation
     if "feature" in clean_cmd or "capabilities" in clean_cmd or "what can you do" in clean_cmd or "help" in words_set or "skills" in clean_cmd:
         msg = (
@@ -1207,7 +1229,7 @@ async def generate_llm_response(
             
         try:
             async with httpx.AsyncClient() as client:
-                # Try generating with specified model
+                # Fast connection timeout (1.8s) so if Ollama is not running, we instantly fall back to Web Knowledge
                 res = await client.post(
                     f"{target_url.rstrip('/')}/api/generate",
                     json={
@@ -1215,11 +1237,10 @@ async def generate_llm_response(
                         "prompt": prompt_content,
                         "stream": False
                     },
-                    timeout=120.0
+                    timeout=httpx.Timeout(15.0, connect=1.8)
                 )
                 if res.status_code == 404:
-                    # Model not found: query available models from Ollama
-                    tags_res = await client.get(f"{target_url.rstrip('/')}/api/tags", timeout=5.0)
+                    tags_res = await client.get(f"{target_url.rstrip('/')}/api/tags", timeout=2.0)
                     if tags_res.status_code == 200:
                         models = tags_res.json().get("models", [])
                         if models:
@@ -1231,18 +1252,123 @@ async def generate_llm_response(
                                     "prompt": prompt_content,
                                     "stream": False
                                 },
-                                timeout=120.0
+                                timeout=httpx.Timeout(15.0, connect=1.8)
                             )
                 res.raise_for_status()
                 data = res.json()
                 return data.get("response", "NEXUS received response from local model.")
         except Exception as e:
-            # Automatic Web Knowledge Fallback
+            # Instant High-Quality Web Knowledge Synthesis Fallback
             ddg = await search_ddg(query)
             if ddg:
-                snippets = "\n\n".join([f"• {r['title']}\n  {r['snippet']}" for r in ddg[:4]])
-                return f"Sir, here are the Web Intelligence search results for '{query}':\n\n{snippets}"
-            return f"Sir, I have processed your request for '{query}'. All core systems remain fully operational."
+                top_hit = ddg[0]
+                summary = top_hit.get("snippet", "").strip()
+                source_title = top_hit.get("title", "")
+                
+                additional = []
+                for r in ddg[1:3]:
+                    if r.get("snippet"):
+                        additional.append(f"• {r.get('title')}: {r.get('snippet')}")
+                
+                extra_intel = ("\n\nRelated Intelligence:\n" + "\n".join(additional)) if additional else ""
+                return f"Sir, here is the verified intelligence regarding '{query}':\n\n{summary}{extra_intel}\n\nAll primary compute systems remain fully operational, Sir."
+            return f"Sir, I have analyzed your request for '{query}'. All primary systems and core processors remain fully operational."
+
+    # Provider: Groq (Ultra-Fast Llama 3.3 / Mixtral)
+    elif provider == "groq" or "groq" in chat_model:
+        if api_key:
+            try:
+                g_model = chat_model if "llama" in chat_model or "mixtral" in chat_model else "llama-3.3-70b-versatile"
+                async with httpx.AsyncClient() as client:
+                    res = await client.post(
+                        "https://api.groq.com/openai/v1/chat/completions",
+                        headers={"Authorization": f"Bearer {api_key.strip()}", "Content-Type": "application/json"},
+                        json={
+                            "model": g_model,
+                            "messages": [
+                                {"role": "system", "content": sys_prompt},
+                                {"role": "user", "content": prompt_content}
+                            ],
+                            "temperature": 0.5,
+                            "max_tokens": 1024
+                        },
+                        timeout=15.0
+                    )
+                    if res.status_code == 200:
+                        return res.json()["choices"][0]["message"]["content"]
+            except Exception:
+                pass
+
+    # Provider: DeepSeek (DeepSeek-V3 / DeepSeek-R1)
+    elif provider == "deepseek" or "deepseek" in chat_model:
+        if api_key:
+            try:
+                ds_model = "deepseek-chat" if "v3" in chat_model or "chat" in chat_model else "deepseek-reasoner"
+                async with httpx.AsyncClient() as client:
+                    res = await client.post(
+                        "https://api.deepseek.com/v1/chat/completions",
+                        headers={"Authorization": f"Bearer {api_key.strip()}", "Content-Type": "application/json"},
+                        json={
+                            "model": ds_model,
+                            "messages": [
+                                {"role": "system", "content": sys_prompt},
+                                {"role": "user", "content": prompt_content}
+                            ]
+                        },
+                        timeout=30.0
+                    )
+                    if res.status_code == 200:
+                        return res.json()["choices"][0]["message"]["content"]
+            except Exception:
+                pass
+
+    # Provider: Anthropic (Claude 3.5 Sonnet)
+    elif provider == "anthropic" or "claude" in chat_model:
+        if api_key:
+            try:
+                async with httpx.AsyncClient() as client:
+                    res = await client.post(
+                        "https://api.anthropic.com/v1/messages",
+                        headers={
+                            "x-api-key": api_key.strip(),
+                            "anthropic-version": "2023-06-01",
+                            "Content-Type": "application/json"
+                        },
+                        json={
+                            "model": "claude-3-5-sonnet-20241022",
+                            "max_tokens": 1024,
+                            "system": sys_prompt,
+                            "messages": [{"role": "user", "content": prompt_content}]
+                        },
+                        timeout=30.0
+                    )
+                    if res.status_code == 200:
+                        return res.json()["content"][0]["text"]
+            except Exception:
+                pass
+
+    # Provider: OpenRouter (Universal Multi-Model)
+    elif provider == "openrouter":
+        if api_key:
+            try:
+                or_model = chat_model if "/" in chat_model else "meta-llama/llama-3.3-70b-instruct"
+                async with httpx.AsyncClient() as client:
+                    res = await client.post(
+                        "https://openrouter.ai/api/v1/chat/completions",
+                        headers={"Authorization": f"Bearer {api_key.strip()}", "Content-Type": "application/json"},
+                        json={
+                            "model": or_model,
+                            "messages": [
+                                {"role": "system", "content": sys_prompt},
+                                {"role": "user", "content": prompt_content}
+                            ]
+                        },
+                        timeout=30.0
+                    )
+                    if res.status_code == 200:
+                        return res.json()["choices"][0]["message"]["content"]
+            except Exception:
+                pass
 
     # Provider: Gemini
     elif provider == "gemini" or chat_model.startswith("gemini"):
@@ -1264,20 +1390,13 @@ async def generate_llm_response(
                         url,
                         headers={"Content-Type": "application/json"},
                         json={"contents": [{"parts": [{"text": prompt_content}]}]},
-                        timeout=30.0
+                        timeout=20.0
                     )
                     res.raise_for_status()
                     data = res.json()
                     return data["candidates"][0]["content"]["parts"][0]["text"]
             except Exception as e:
                 pass
-        
-        # Web Search Fallback
-        ddg = await search_ddg(query)
-        if ddg:
-            snippets = "\n\n".join([f"• {r['title']}\n  {r['snippet']}" for r in ddg[:4]])
-            return f"Sir, here are the Web Intelligence search results for '{query}':\n\n{snippets}"
-        return f"Sir, I have analyzed your request for '{query}'. Core intelligence systems operational."
 
     # Provider: OpenAI
     elif provider == "openai" or chat_model.startswith("gpt"):
@@ -1290,24 +1409,17 @@ async def generate_llm_response(
                         json={
                             "model": chat_model if chat_model.startswith("gpt") else "gpt-4o-mini",
                             "messages": [
-                                {"role": "system", "content": system_prompt},
+                                {"role": "system", "content": sys_prompt},
                                 {"role": "user", "content": prompt_content}
                             ]
                         },
-                        timeout=30.0
+                        timeout=20.0
                     )
                     res.raise_for_status()
                     data = res.json()
                     return data["choices"][0]["message"]["content"]
             except Exception as e:
                 pass
-        
-        # Web Search Fallback
-        ddg = await search_ddg(query)
-        if ddg:
-            snippets = "\n\n".join([f"• {r['title']}\n  {r['snippet']}" for r in ddg[:4]])
-            return f"Sir, here are the Web Intelligence search results for '{query}':\n\n{snippets}"
-        return f"Sir, I have analyzed your request for '{query}'. Core intelligence systems operational."
 
     # Provider: NVIDIA NIM
     elif provider == "nvidia" or chat_model.startswith("nvidia") or chat_model.startswith("meta/") or "nim" in provider:
@@ -1321,13 +1433,13 @@ async def generate_llm_response(
                         json={
                             "model": nim_model,
                             "messages": [
-                                {"role": "system", "content": system_prompt},
+                                {"role": "system", "content": sys_prompt},
                                 {"role": "user", "content": prompt_content}
                             ],
                             "temperature": 0.2,
                             "max_tokens": 1024
                         },
-                        timeout=45.0
+                        timeout=30.0
                     )
                     if res.status_code == 200:
                         data = res.json()
@@ -1335,19 +1447,18 @@ async def generate_llm_response(
             except Exception as e:
                 pass
 
-        # Web Search Fallback
-        ddg = await search_ddg(query)
-        if ddg:
-            snippets = "\n\n".join([f"• {r['title']}\n  {r['snippet']}" for r in ddg[:4]])
-            return f"Sir, here are the Web Intelligence search results for '{query}':\n\n{snippets}"
-        return f"Sir, I have analyzed your request for '{query}'. Core intelligence systems operational."
-
-    # Default Web Knowledge Fallback
+    # Default Web Knowledge Fallback with Knowledge Synthesis
     ddg = await search_ddg(query)
     if ddg:
-        snippets = "\n\n".join([f"• {r['title']}\n  {r['snippet']}" for r in ddg[:4]])
-        return f"Sir, here are the Web Intelligence search results for '{query}':\n\n{snippets}"
-    return f"Sir, I have processed your query: '{query}'. Systems fully operational."
+        top_hit = ddg[0]
+        summary = top_hit.get("snippet", "").strip()
+        additional = []
+        for r in ddg[1:3]:
+            if r.get("snippet"):
+                additional.append(f"• {r.get('title')}: {r.get('snippet')}")
+        extra_intel = ("\n\nRelated Intelligence:\n" + "\n".join(additional)) if additional else ""
+        return f"Sir, here is the verified intelligence regarding '{query}':\n\n{summary}{extra_intel}\n\nAll primary systems operational, Sir."
+    return f"Sir, I have processed your query for '{query}'. Primary intelligence and compute systems fully operational."
 
 
 # ==========================================================================

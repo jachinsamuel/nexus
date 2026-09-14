@@ -372,7 +372,7 @@ async def chat_stream(request: ChatRequest, background_tasks: BackgroundTasks):
             for token in tokens:
                 full_response += token
                 yield f"event: token\ndata: {json.dumps(token)}\n\n"
-                await asyncio.sleep(0.015)
+                await asyncio.sleep(0.003)
                 
             db.add_message(conv_id, "assistant", full_response)
         except Exception as e:
