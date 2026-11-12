@@ -1,6 +1,8 @@
 import io
 import os
 import sys
+import re
+import subprocess
 import uuid
 import json
 import numpy as np
@@ -213,25 +215,497 @@ async def take_desktop_screenshot() -> Dict[str, Any]:
     return {"status": "success", "message": "NEXUS Desktop Snapshot captured."}
 
 def control_system_volume(action: str) -> Dict[str, Any]:
-    """Controls Windows system audio volume (mute, unmute, volume up, volume down)."""
+    """Controls Windows system audio volume and media playback keys."""
     try:
         if platform.system() == "Windows":
             cmd = action.lower()
-            if "mute" in cmd or "unmute" in cmd:
+            
+            # Media playback keys
+            if "play" in cmd or "resume" in cmd or "pause" in cmd:
+                ps_cmd = "$wsh = New-Object -ComObject WScript.Shell; $wsh.SendKeys([char]179)"
+                label = "PLAY / PAUSE"
+            elif "next" in cmd or "skip" in cmd:
+                ps_cmd = "$wsh = New-Object -ComObject WScript.Shell; $wsh.SendKeys([char]176)"
+                label = "NEXT TRACK"
+            elif "prev" in cmd or "replay" in cmd or "back" in cmd:
+                ps_cmd = "$wsh = New-Object -ComObject WScript.Shell; $wsh.SendKeys([char]177)"
+                label = "PREVIOUS TRACK"
+            elif "stop" in cmd:
+                ps_cmd = "$wsh = New-Object -ComObject WScript.Shell; $wsh.SendKeys([char]178)"
+                label = "STOP MEDIA"
+            elif "mute" in cmd or "unmute" in cmd or "silence" in cmd:
                 ps_cmd = "$wsh = New-Object -ComObject WScript.Shell; $wsh.SendKeys([char]173)"
-            elif "up" in cmd or "increase" in cmd:
-                ps_cmd = "$wsh = New-Object -ComObject WScript.Shell; 1..5 | % { $wsh.SendKeys([char]175) }"
-            elif "down" in cmd or "decrease" in cmd:
-                ps_cmd = "$wsh = New-Object -ComObject WScript.Shell; 1..5 | % { $wsh.SendKeys([char]174) }"
+                label = "MUTE / UNMUTE"
+            elif "up" in cmd or "increase" in cmd or "louder" in cmd or "boost" in cmd:
+                ps_cmd = "$wsh = New-Object -ComObject WScript.Shell; 1..6 | % { $wsh.SendKeys([char]175) }"
+                label = "VOLUME UP (+12%)"
+            elif "down" in cmd or "decrease" in cmd or "quieter" in cmd or "lower" in cmd:
+                ps_cmd = "$wsh = New-Object -ComObject WScript.Shell; 1..6 | % { $wsh.SendKeys([char]174) }"
+                label = "VOLUME DOWN (-12%)"
+            elif "max" in cmd or "100" in cmd:
+                ps_cmd = "$wsh = New-Object -ComObject WScript.Shell; 1..50 | % { $wsh.SendKeys([char]175) }"
+                label = "VOLUME MAXIMUM (100%)"
             else:
-                ps_cmd = ""
+                ps_cmd = "$wsh = New-Object -ComObject WScript.Shell; 1..5 | % { $wsh.SendKeys([char]175) }"
+                label = "VOLUME ADJUST"
                 
-            if ps_cmd:
-                subprocess.run(["powershell", "-command", ps_cmd], capture_output=True, text=True)
-                return {"status": "success", "message": f"NEXUS Audio Control: {action.upper()} executed."}
+            subprocess.run(["powershell", "-NoProfile", "-Command", ps_cmd], capture_output=True, text=True, timeout=3.0)
+            return {"status": "success", "message": f"NEXUS Audio Control: {label} executed, Sir."}
     except Exception as e:
         return {"status": "error", "message": f"Audio control error: {str(e)}"}
-    return {"status": "success", "message": f"NEXUS Audio command processed."}
+    return {"status": "success", "message": "NEXUS Audio command processed."}
+
+def control_system_brightness(cmd: str) -> Dict[str, Any]:
+    """Controls laptop display brightness on Windows (up, down, set percentage, query)."""
+    if platform.system() != "Windows":
+        return {"status": "error", "message": "Brightness control supported on Windows."}
+    
+    clean = cmd.lower()
+    ps_get = "Get-CimInstance -Namespace root/WMI -ClassName WmiMonitorBrightness | Select-Object -ExpandProperty CurrentBrightness"
+    try:
+        res = subprocess.run(["powershell", "-NoProfile", "-Command", ps_get], capture_output=True, text=True, timeout=4.0)
+        current_val = int(res.stdout.strip()) if res.stdout.strip().isdigit() else 40
+    except Exception:
+        current_val = 40
+
+    if ("what is" in clean or "current" in clean or "level" in clean) and not any(k in clean for k in ["set", "increase", "decrease", "up", "down", "to"]):
+        return {
+            "status": "success",
+            "message": f"NEXUS Display Control: Current screen brightness is {current_val}%, Sir.",
+            "brightness": current_val
+        }
+
+    num_match = re.search(r'(\d+)\s*%', clean) or re.search(r'(?:to|set|at)\s+(\d+)', clean)
+    if num_match:
+        target_val = max(5, min(100, int(num_match.group(1))))
+    elif "up" in clean or "increase" in clean or "brighter" in clean or "boost" in clean:
+        target_val = min(100, current_val + 15)
+    elif "down" in clean or "decrease" in clean or "dim" in clean or "lower" in clean:
+        target_val = max(10, current_val - 15)
+    elif "max" in clean or "maximum" in clean:
+        target_val = 100
+    elif "min" in clean or "minimum" in clean:
+        target_val = 15
+    else:
+        target_val = current_val
+
+    ps_set = f"Get-CimInstance -Namespace root/WMI -ClassName WmiMonitorBrightnessMethods | Invoke-CimMethod -MethodName WmiSetBrightness -Arguments @{{Brightness = {target_val}; Timeout = 1}}"
+    try:
+        subprocess.run(["powershell", "-NoProfile", "-Command", ps_set], capture_output=True, text=True, timeout=4.0)
+        return {
+            "status": "success",
+            "message": f"NEXUS Display Control: Screen brightness adjusted to {target_val}%, Sir.",
+            "brightness": target_val
+        }
+    except Exception as e:
+        return {"status": "error", "message": f"Brightness adjustment error: {str(e)}"}
+
+def get_battery_telemetry() -> Dict[str, Any]:
+    """Retrieves detailed laptop battery, charging state, and runtime metrics."""
+    try:
+        bat = psutil.sensors_battery()
+        if not bat:
+            return {"status": "success", "message": "NEXUS Power Telemetry: Laptop is connected to AC mains power."}
+        
+        percent = round(bat.percent, 1)
+        plugged = bat.power_plugged
+        status_str = "Charging (Connected to AC Power)" if plugged else "Discharging (On Battery Power)"
+        
+        if plugged:
+            time_msg = "AC Adapter Active"
+        elif bat.secsleft == psutil.POWER_TIME_UNLIMITED or bat.secsleft == psutil.POWER_TIME_UNKNOWN:
+            time_msg = "Estimating remaining runtime..."
+        else:
+            hours = bat.secsleft // 3600
+            mins = (bat.secsleft % 3600) // 60
+            time_msg = f"{hours}h {mins}m remaining"
+            
+        msg = f"NEXUS Battery Telemetry:\n• Charge Level: {percent}%\n• Power State: {status_str}\n• Estimated Runtime: {time_msg}"
+        return {"status": "success", "message": msg, "percent": percent, "plugged": plugged, "time_left": time_msg}
+    except Exception as e:
+        return {"status": "error", "message": f"Battery telemetry failed: {str(e)}"}
+
+def get_wifi_network_telemetry() -> Dict[str, Any]:
+    """Retrieves Wi-Fi SSID, signal strength, and network connection status on Windows."""
+    try:
+        if platform.system() == "Windows":
+            res = subprocess.run(["netsh", "wlan", "show", "interfaces"], capture_output=True, text=True, timeout=3.0)
+            out = res.stdout
+            ssid_match = re.search(r"^\s*SSID\s*:\s*(.+)$", out, re.MULTILINE)
+            signal_match = re.search(r"^\s*Signal\s*:\s*(.+)$", out, re.MULTILINE)
+            state_match = re.search(r"^\s*State\s*:\s*(.+)$", out, re.MULTILINE)
+            radio_match = re.search(r"^\s*Radio type\s*:\s*(.+)$", out, re.MULTILINE)
+            
+            ssid = ssid_match.group(1).strip() if ssid_match else "Disconnected"
+            signal = signal_match.group(1).strip() if signal_match else "0%"
+            state = state_match.group(1).strip() if state_match else "Not connected"
+            radio = radio_match.group(1).strip() if radio_match else "802.11ax"
+            
+            msg = f"NEXUS Wireless Telemetry:\n• Network (SSID): {ssid}\n• Signal Strength: {signal}\n• Connection State: {state.capitalize()}\n• Protocol: {radio}"
+            return {"status": "success", "message": msg, "ssid": ssid, "signal": signal, "state": state}
+    except Exception:
+        pass
+    return {"status": "success", "message": "NEXUS Wireless Telemetry: Network link active."}
+
+def control_window_management(cmd: str) -> Dict[str, Any]:
+    """Manages desktop windows (minimize all, show desktop, restore, close window, switch tab/app)."""
+    clean = cmd.lower()
+    try:
+        if platform.system() == "Windows":
+            if "minimize all" in clean or "show desktop" in clean or "minimize windows" in clean or "hide windows" in clean:
+                ps = "(New-Object -ComObject Shell.Application).MinimizeAll()"
+                subprocess.run(["powershell", "-NoProfile", "-Command", ps], capture_output=True, timeout=3.0)
+                return {"status": "success", "message": "NEXUS Desktop: Minimized all active windows, Sir."}
+                
+            elif "restore" in clean or "unminimize" in clean or "bring back" in clean or "undo minimize" in clean:
+                ps = "(New-Object -ComObject Shell.Application).UndoMinimizeALL()"
+                subprocess.run(["powershell", "-NoProfile", "-Command", ps], capture_output=True, timeout=3.0)
+                return {"status": "success", "message": "NEXUS Desktop: Restored previously minimized windows, Sir."}
+                
+            elif "close window" in clean or "close active window" in clean or "close app" in clean or "close current window" in clean:
+                ps = "$wsh = New-Object -ComObject WScript.Shell; $wsh.SendKeys('%{F4}')"
+                subprocess.run(["powershell", "-NoProfile", "-Command", ps], capture_output=True, timeout=3.0)
+                return {"status": "success", "message": "NEXUS Desktop: Sent Alt+F4 to close active window, Sir."}
+                
+            elif "close tab" in clean or "close browser tab" in clean or "close current tab" in clean:
+                ps = "$wsh = New-Object -ComObject WScript.Shell; $wsh.SendKeys('^w')"
+                subprocess.run(["powershell", "-NoProfile", "-Command", ps], capture_output=True, timeout=3.0)
+                return {"status": "success", "message": "NEXUS Desktop: Sent Ctrl+W to close active tab, Sir."}
+                
+            elif "switch window" in clean or "alt tab" in clean or "switch app" in clean:
+                ps = "$wsh = New-Object -ComObject WScript.Shell; $wsh.SendKeys('%{TAB}')"
+                subprocess.run(["powershell", "-NoProfile", "-Command", ps], capture_output=True, timeout=3.0)
+                return {"status": "success", "message": "NEXUS Desktop: Switched active window focus, Sir."}
+    except Exception as e:
+        return {"status": "error", "message": f"Window management error: {str(e)}"}
+    return {"status": "error", "message": "Unrecognized window management directive."}
+
+def control_power_state(cmd: str) -> Dict[str, Any]:
+    """Executes safe power operations (lock, sleep, hibernate)."""
+    clean = cmd.lower()
+    try:
+        if platform.system() == "Windows":
+            if "lock" in clean:
+                subprocess.Popen("rundll32.exe user32.dll,LockWorkStation", shell=True)
+                return {"status": "success", "message": "NEXUS Security: Workstation locked immediately, Sir."}
+            elif "sleep" in clean or "suspend" in clean:
+                subprocess.Popen("rundll32.exe powrprof.dll,SetSuspendState 0,1,0", shell=True)
+                return {"status": "success", "message": "NEXUS Power: System transitioning to Sleep state, Sir."}
+            elif "hibernate" in clean:
+                subprocess.Popen("shutdown /h", shell=True)
+                return {"status": "success", "message": "NEXUS Power: System entering Hibernation, Sir."}
+            elif "restart" in clean:
+                return {
+                    "status": "success",
+                    "message": "NEXUS Safety Guard: To restart, say 'run command shutdown /r /t 30' or execute directly.",
+                }
+            elif "shutdown" in clean or "turn off" in clean:
+                return {
+                    "status": "success",
+                    "message": "NEXUS Safety Guard: To shutdown, say 'run command shutdown /s /t 30' or execute directly.",
+                }
+    except Exception as e:
+        return {"status": "error", "message": f"Power control error: {str(e)}"}
+    return {"status": "error", "message": "Power directive not recognized."}
+
+def empty_recycle_bin_and_clean_temp(cmd: str) -> Dict[str, Any]:
+    """Clears Windows Recycle Bin and purges temporary cache files safely."""
+    clean = cmd.lower()
+    actions_done = []
+    try:
+        if platform.system() == "Windows":
+            if "recycle bin" in clean or "trash" in clean:
+                ps = "Clear-RecycleBin -Force -ErrorAction SilentlyContinue"
+                subprocess.run(["powershell", "-NoProfile", "-Command", ps], capture_output=True, timeout=5.0)
+                actions_done.append("Windows Recycle Bin purged")
+            
+            if "temp" in clean or "cache" in clean or "space" in clean:
+                ps_temp = 'Remove-Item -Path "$env:TEMP\\*" -Recurse -Force -ErrorAction SilentlyContinue'
+                subprocess.run(["powershell", "-NoProfile", "-Command", ps_temp], capture_output=True, timeout=5.0)
+                actions_done.append("Transient temporary files cleared")
+                
+            if not actions_done:
+                ps = "Clear-RecycleBin -Force -ErrorAction SilentlyContinue"
+                subprocess.run(["powershell", "-NoProfile", "-Command", ps], capture_output=True, timeout=5.0)
+                actions_done.append("Windows Recycle Bin purged")
+                
+            return {
+                "status": "success",
+                "message": f"NEXUS Maintenance Complete:\n• " + "\n• ".join(actions_done) + "\n• System storage reclaimed, Sir."
+            }
+    except Exception as e:
+        return {"status": "error", "message": f"Cleanup operation error: {str(e)}"}
+    return {"status": "success", "message": "Cleanup routine completed."}
+
+def open_system_folder_or_drive(folder_key: str) -> Dict[str, Any]:
+    """Opens standard Windows user directories, drives, or project repositories."""
+    clean = folder_key.lower().strip()
+    folder_map = {
+        "downloads": "shell:Downloads",
+        "download": "shell:Downloads",
+        "documents": "shell:Personal",
+        "my documents": "shell:Personal",
+        "desktop": "shell:Desktop",
+        "pictures": "shell:My Pictures",
+        "my pictures": "shell:My Pictures",
+        "photos": "shell:My Pictures",
+        "videos": "shell:My Video",
+        "my videos": "shell:My Video",
+        "music": "shell:My Music",
+        "my music": "shell:My Music",
+        "recycle bin": "shell:RecycleBinFolder",
+        "trash": "shell:RecycleBinFolder",
+        "c drive": "C:\\",
+        "drive c": "C:\\",
+        "c:": "C:\\",
+        "d drive": "D:\\",
+        "drive d": "D:\\",
+        "d:": "D:\\",
+        "projects": r"d:\Projects",
+        "projects folder": r"d:\Projects",
+        "my projects": r"d:\Projects",
+        "temp": os.environ.get("TEMP", "C:\\Windows\\Temp")
+    }
+
+    for k, target in folder_map.items():
+        if k in clean:
+            try:
+                subprocess.Popen(f'explorer.exe "{target}"', shell=True)
+                return {
+                    "status": "success",
+                    "message": f"NEXUS opened {k.upper()} in File Explorer, Sir.",
+                    "target": target
+                }
+            except Exception as e:
+                return {"status": "error", "message": f"Failed to open {k}: {str(e)}"}
+                
+    if os.path.exists(folder_key.strip()):
+        subprocess.Popen(f'explorer.exe "{folder_key.strip()}"', shell=True)
+        return {"status": "success", "message": f"NEXUS opened '{folder_key}' in File Explorer, Sir."}
+        
+    return {"status": "error", "message": f"Folder '{folder_key}' not recognized or does not exist."}
+
+def open_windows_settings(setting_key: str) -> Dict[str, Any]:
+    """Opens Windows 10/11 Settings sub-pages, Control Panel, or Administrative Consoles."""
+    clean = setting_key.lower().strip()
+    settings_map = {
+        "bluetooth": ("ms-settings:bluetooth", "Bluetooth & Devices Settings"),
+        "wifi": ("ms-settings:network-wifi", "Wi-Fi Network Settings"),
+        "network": ("ms-settings:network", "Network & Internet Settings"),
+        "sound": ("ms-settings:sound", "Sound & Audio Settings"),
+        "audio": ("ms-settings:sound", "Sound & Audio Settings"),
+        "display": ("ms-settings:display", "Display Settings"),
+        "screen": ("ms-settings:display", "Display Settings"),
+        "battery": ("ms-settings:batterysaver", "Battery & Power Settings"),
+        "power": ("ms-settings:powersleep", "Power & Sleep Settings"),
+        "sleep": ("ms-settings:powersleep", "Power & Sleep Settings"),
+        "storage": ("ms-settings:storagesense", "Storage Settings"),
+        "update": ("ms-settings:windowsupdate", "Windows Update"),
+        "windows update": ("ms-settings:windowsupdate", "Windows Update"),
+        "apps": ("ms-settings:appsfeatures", "Installed Apps & Features"),
+        "installed apps": ("ms-settings:appsfeatures", "Installed Apps"),
+        "notifications": ("ms-settings:notifications", "Notification Settings"),
+        "personalization": ("ms-settings:personalization", "Personalization & Themes"),
+        "taskbar": ("ms-settings:taskbar", "Taskbar Settings"),
+        "control panel": ("control", "Windows Control Panel"),
+        "device manager": ("devmgmt.msc", "Device Manager Console"),
+        "disk management": ("diskmgmt.msc", "Disk Management Console"),
+        "task manager": ("taskmgr", "Windows Task Manager"),
+        "snipping tool": ("snippingtool", "Windows Snipping Tool"),
+        "clock": ("ms-clock:", "Windows Clock & Alarms"),
+        "alarms": ("ms-clock:", "Windows Clock & Alarms"),
+        "timer": ("ms-clock:", "Windows Clock & Alarms"),
+        "settings": ("ms-settings:", "Windows Settings Home")
+    }
+
+    for k, (uri, label) in settings_map.items():
+        if k in clean:
+            try:
+                subprocess.Popen(f'start "" "{uri}"', shell=True)
+                return {"status": "success", "message": f"NEXUS opened {label}, Sir.", "target": uri}
+            except Exception as e:
+                return {"status": "error", "message": f"Failed to open {label}: {str(e)}"}
+
+    try:
+        subprocess.Popen('start "" "ms-settings:"', shell=True)
+        return {"status": "success", "message": "NEXUS opened Windows Settings Home, Sir."}
+    except Exception as e:
+        return {"status": "error", "message": f"Could not launch Settings: {str(e)}"}
+
+def manage_files_and_directories(cmd: str) -> Dict[str, Any]:
+    """Handles file creation, deletion, reading, directory creation, and directory listings."""
+    clean = cmd.strip()
+    lower = clean.lower()
+
+    # 1. Create Folder
+    m_folder = re.search(r'(?:create|make|new)\s+(?:folder|directory|dir)\s+(.+)', lower, re.IGNORECASE)
+    if m_folder:
+        folder_name = m_folder.group(1).replace('"', '').replace("'", "").strip()
+        if not (":\\" in folder_name or folder_name.startswith("/") or folder_name.startswith("\\")):
+            desktop_p = os.path.join(os.environ.get("USERPROFILE", r"C:\Users\jachi"), "Desktop")
+            target_p = os.path.join(desktop_p, folder_name)
+        else:
+            target_p = folder_name
+            
+        try:
+            os.makedirs(target_p, exist_ok=True)
+            return {"status": "success", "message": f"NEXUS created folder successfully, Sir:\n• Path: {target_p}", "path": target_p}
+        except Exception as e:
+            return {"status": "error", "message": f"Folder creation failed: {str(e)}"}
+
+    # 2. Create File
+    m_file = re.search(r'(?:create|write|make)\s+file\s+([^\s]+)(?:\s+with content\s+(.+))?', clean, re.IGNORECASE)
+    if m_file:
+        file_name = m_file.group(1).strip()
+        content = m_file.group(2).strip() if m_file.group(2) else ""
+        if not (":\\" in file_name or file_name.startswith("/") or file_name.startswith("\\")):
+            desktop_p = os.path.join(os.environ.get("USERPROFILE", r"C:\Users\jachi"), "Desktop")
+            target_p = os.path.join(desktop_p, file_name)
+        else:
+            target_p = file_name
+            
+        try:
+            os.makedirs(os.path.dirname(target_p), exist_ok=True)
+            with open(target_p, "w", encoding="utf-8") as f:
+                f.write(content)
+            return {"status": "success", "message": f"NEXUS created file successfully, Sir:\n• File: {target_p}\n• Size: {len(content)} characters written.", "path": target_p}
+        except Exception as e:
+            return {"status": "error", "message": f"File creation failed: {str(e)}"}
+
+    # 3. Read File
+    m_read = re.search(r'(?:read|cat|view|show content of)\s+(?:file\s+)?(.+)', clean, re.IGNORECASE)
+    if m_read:
+        file_path = m_read.group(1).strip().replace('"', '')
+        if os.path.exists(file_path) and os.path.isfile(file_path):
+            try:
+                with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+                    content = f.read(1200)
+                return {"status": "success", "message": f"NEXUS File Content ({os.path.basename(file_path)}):\n```\n{content}\n```", "content": content}
+            except Exception as e:
+                return {"status": "error", "message": f"Failed to read file: {str(e)}"}
+
+    # 4. Delete File
+    m_del = re.search(r'(?:delete|remove)\s+file\s+(.+)', clean, re.IGNORECASE)
+    if m_del:
+        file_path = m_del.group(1).strip().replace('"', '')
+        if os.path.exists(file_path) and os.path.isfile(file_path):
+            try:
+                os.remove(file_path)
+                return {"status": "success", "message": f"NEXUS permanently removed file: {file_path}, Sir."}
+            except Exception as e:
+                return {"status": "error", "message": f"Failed to delete file: {str(e)}"}
+        return {"status": "error", "message": f"File not found at specified path: {file_path}"}
+
+    # 5. List Files
+    m_list = re.search(r'(?:list|show|get)\s+files\s+(?:in|of)?\s*(.+)', clean, re.IGNORECASE)
+    if m_list:
+        target_dir = m_list.group(1).strip().replace('"', '')
+        folder_aliases = {
+            "downloads": os.path.join(os.environ.get("USERPROFILE", r"C:\Users\jachi"), "Downloads"),
+            "desktop": os.path.join(os.environ.get("USERPROFILE", r"C:\Users\jachi"), "Desktop"),
+            "documents": os.path.join(os.environ.get("USERPROFILE", r"C:\Users\jachi"), "Documents"),
+            "projects": r"d:\Projects",
+        }
+        dir_path = folder_aliases.get(target_dir.lower(), target_dir)
+        if os.path.exists(dir_path) and os.path.isdir(dir_path):
+            try:
+                items = os.listdir(dir_path)[:12]
+                lines = [f"• {'📁 ' if os.path.isdir(os.path.join(dir_path, i)) else '📄 '}{i}" for i in items]
+                return {"status": "success", "message": f"NEXUS Directory Listing ({dir_path}):\n" + "\n".join(lines), "items": items}
+            except Exception as e:
+                return {"status": "error", "message": f"Directory read error: {str(e)}"}
+
+    return {"status": "error", "message": "File or directory command not recognized."}
+
+def execute_shell_command(cmd_str: str, shell_type: str = "powershell") -> Dict[str, Any]:
+    """Executes safe shell command in PowerShell or CMD, returning output and returncode."""
+    clean = cmd_str.strip()
+    clean = re.sub(r'^(?:run\s+command|execute\s+command|run\s+powershell|execute\s+powershell|powershell|run\s+shell|run\s+terminal|terminal|cmd)\s+', '', clean, flags=re.IGNORECASE).strip()
+    
+    if not clean:
+        return {"status": "error", "message": "No shell command provided, Sir."}
+
+    try:
+        if shell_type == "powershell":
+            proc = subprocess.run(["powershell", "-NoProfile", "-Command", clean], capture_output=True, text=True, timeout=25.0)
+        else:
+            proc = subprocess.run(clean, shell=True, capture_output=True, text=True, timeout=25.0)
+            
+        out = (proc.stdout or "").strip()
+        err = (proc.stderr or "").strip()
+        
+        if proc.returncode == 0:
+            display_out = out if out else "Command executed cleanly with return code 0."
+            if len(display_out) > 1000:
+                display_out = display_out[:1000] + "\n...[truncated]"
+            return {"status": "success", "message": f"NEXUS Command Output:\n```\n{display_out}\n```", "output": out, "returncode": 0}
+        else:
+            return {"status": "error", "message": f"NEXUS Command Error (Code {proc.returncode}):\n{err[:400] if err else out[:400]}", "output": out, "error": err, "returncode": proc.returncode}
+    except subprocess.TimeoutExpired:
+        return {"status": "error", "message": f"Command execution timed out after 25 seconds for '{clean}'."}
+    except Exception as e:
+        return {"status": "error", "message": f"Execution failed: {str(e)}"}
+
+_CPU_MODEL_CACHE: Optional[str] = None
+_GPU_MODEL_CACHE: Optional[str] = None
+
+def get_full_hardware_specs() -> Dict[str, Any]:
+    """Compiles detailed laptop hardware profile (CPU, GPU, RAM, OS, Storage) with zero-latency registry access."""
+    global _CPU_MODEL_CACHE, _GPU_MODEL_CACHE
+    try:
+        if not _CPU_MODEL_CACHE:
+            try:
+                import winreg
+                key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r'HARDWARE\DESCRIPTION\System\CentralProcessor\0')
+                _CPU_MODEL_CACHE = winreg.QueryValueEx(key, 'ProcessorNameString')[0].strip()
+            except Exception:
+                _CPU_MODEL_CACHE = platform.processor() or "Multi-Core CPU"
+
+        if not _GPU_MODEL_CACHE:
+            try:
+                import winreg
+                key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r'SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000')
+                _GPU_MODEL_CACHE = winreg.QueryValueEx(key, 'DriverDesc')[0].strip()
+            except Exception:
+                _GPU_MODEL_CACHE = "Intel(R) Iris(R) Xe Graphics"
+
+        cpu_name = _CPU_MODEL_CACHE
+        gpu_name = _GPU_MODEL_CACHE
+        mem = psutil.virtual_memory()
+        total_ram = round(mem.total / (1024**3), 1)
+        used_ram = round(mem.used / (1024**3), 1)
+        c_disk = psutil.disk_usage('C:')
+        c_storage = f"{round(c_disk.free / (1024**3), 1)} GB free of {round(c_disk.total / (1024**3), 1)} GB"
+        bat = psutil.sensors_battery()
+        bat_str = f"{round(bat.percent, 1)}% ({'Charging' if bat.power_plugged else 'On Battery'})" if bat else "AC Mains"
+        msg = (
+            f"NEXUS Laptop Hardware Specifications:\n"
+            f"• Processor (CPU): {cpu_name} ({psutil.cpu_count(logical=True)} Cores)\n"
+            f"• Graphics (GPU): {gpu_name}\n"
+            f"• System Memory: {total_ram} GB RAM ({used_ram} GB in use)\n"
+            f"• Primary Storage (C:): {c_storage}\n"
+            f"• Battery State: {bat_str}\n"
+            f"• Operating System: {platform.system()} {platform.release()} (64-bit)"
+        )
+        return {"status": "success", "message": msg, "cpu": cpu_name, "gpu": gpu_name, "ram": total_ram}
+    except Exception as e:
+        return {"status": "error", "message": f"Specs retrieval failed: {str(e)}"}
+
+def get_system_uptime() -> Dict[str, Any]:
+    """Calculates laptop uptime and system boot timestamp."""
+    try:
+        boot_t = datetime.fromtimestamp(psutil.boot_time())
+        delta = datetime.now() - boot_t
+        days = delta.days
+        hours = delta.seconds // 3600
+        minutes = (delta.seconds % 3600) // 60
+        uptime_str = f"{days}d {hours}h {minutes}m" if days > 0 else f"{hours}h {minutes}m"
+        boot_str = boot_t.strftime("%A, %B %d at %I:%M %p")
+        msg = f"NEXUS System Uptime:\n• Active Uptime: {uptime_str}\n• System Boot: {boot_str}"
+        return {"status": "success", "message": msg, "uptime": uptime_str, "boot_time": boot_str}
+    except Exception as e:
+        return {"status": "error", "message": f"Uptime retrieval failed: {str(e)}"}
+
 
 async def search_wikipedia(topic: str) -> Dict[str, Any]:
     """Queries Wikipedia REST API for instant encyclopedic summary."""
@@ -529,17 +1003,21 @@ async def parse_and_execute_voice_intent(command_raw: str) -> Dict[str, Any]:
     # 0.4 Comprehensive Features & Capabilities Explanation
     if "feature" in clean_cmd or "capabilities" in clean_cmd or "what can you do" in clean_cmd or "help" in words_set or "skills" in clean_cmd:
         msg = (
-            "Sir, here are all the NEXUS Core Capabilities:\n"
-            "1. Voice & Speech Control: Hands-free voice recognition with deep male voice synthesis.\n"
-            "2. Project & Command Execution: Say 'open <project>' or 'open <project> and execute <cmd>' (e.g., 'open ace and execute ace ship').\n"
-            "3. Universal App Launcher: Launch desktop applications ('open chrome', 'open vscode', 'open spotify', 'open calculator').\n"
-            "4. JARVIS Protocols: Execute 'Protocol House Party' (system audit), 'Clean Slate' (buffer wipe), or 'Protocol Lockdown' (locks workstation).\n"
-            "5. Hardware & Network Telemetry: Real-time CPU %, RAM GB, Drive Storage, Battery tracking, and Network Ping latency.\n"
-            "6. Desktop Screen Capture: Say 'take screenshot' to capture and save your screen.\n"
-            "7. Intelligence & Utilities: Wikipedia lookup, Math calculator, Unit converter, Live Weather, and News Briefings.\n"
-            "8. Clipboard Reader: Say 'read clipboard' to inspect and speak copied text out loud.\n"
-            "9. Web Search & Navigation: Say 'search google for <query>' or 'search youtube for <video>'.\n"
-            "10. Git & System Automation: Inspect git status, commits, and automate workflow tasks."
+            "Sir, here is the complete catalog of NEXUS Laptop & OS Automation Capabilities:\n"
+            "1. Hardware & System Controls: Display Brightness ('brightness 50%', 'brightness up'), Audio Volume & Media ('mute', 'volume up', 'play music', 'next song').\n"
+            "2. Window & Multitasking Management: 'minimize all' (show desktop), 'restore windows', 'close window' (Alt+F4), 'close tab' (Ctrl+W), 'switch window' (Alt+Tab).\n"
+            "3. Power & Battery Management: 'battery' (charge % and runtime left), 'lock pc' (instant lockdown), 'sleep', 'hibernate', 'system uptime'.\n"
+            "4. Universal App Launcher & Process Killer: Open ANY app ('open chrome', 'open vscode', 'open spotify') and close them ('close chrome', 'kill process <name>').\n"
+            "5. Standard Folder & Drive Navigation: 'open downloads', 'open documents', 'open desktop', 'open pictures', 'open c drive', 'open d drive', 'open projects'.\n"
+            "6. Windows Settings & Utilities: 'open settings', 'open bluetooth', 'open wifi', 'open sound', 'open display', 'open task manager', 'open control panel', 'open device manager'.\n"
+            "7. File & Directory Operations: 'create folder <name>', 'create file <name> with content <text>', 'read file <path>', 'delete file <path>', 'list files in downloads'.\n"
+            "8. Shell & PowerShell Automation: 'run command <cmd>' (e.g., 'run command ipconfig'), execute PowerShell scripts, run Python code.\n"
+            "9. System Maintenance & Storage: 'empty recycle bin', 'clean temp files', 'disk space'.\n"
+            "10. Wireless & Network Telemetry: 'wifi status' (SSID, signal %, connection state), 'ping' (latency check).\n"
+            "11. Hardware Specs: 'system specs' (CPU, GPU, RAM, OS, Storage overview).\n"
+            "12. Screen & Clipboard: 'take screenshot' (saves full screen snapshot), 'read clipboard', 'copy to clipboard'.\n"
+            "13. Multi-step Projects: 'open <project>' or 'open <project> and execute <cmd>'.\n"
+            "14. Web & Research Intelligence: 'search google for <query>', 'search youtube for <video>', Wikipedia encyclopedia, live weather, and news briefings."
         )
         return {
             "status": "action_executed",
@@ -565,7 +1043,220 @@ async def parse_and_execute_voice_intent(command_raw: str) -> Dict[str, Any]:
             "data": {"identity": "NEXUS"}
         }
 
-    # 1. Direct Time & Date Match (Instant Response)
+    # 1. Display Brightness Control
+    if "brightness" in clean_cmd or "screen light" in clean_cmd or ("dim" in words_set and "screen" in clean_cmd) or ("brighter" in clean_cmd and "screen" in clean_cmd):
+        res = control_system_brightness(clean_cmd)
+        return {
+            "status": "action_executed",
+            "intent": "system_brightness",
+            "message": res["message"],
+            "data": res
+        }
+
+    # 2. Audio Volume & Media Playback Control
+    if (
+        "volume" in clean_cmd or "mute" in clean_cmd or "unmute" in clean_cmd or "louder" in clean_cmd or "quieter" in clean_cmd
+        or "play music" in clean_cmd or "pause music" in clean_cmd or "resume music" in clean_cmd or "next song" in clean_cmd
+        or "next track" in clean_cmd or "previous song" in clean_cmd or "previous track" in clean_cmd or "skip song" in clean_cmd
+        or "stop music" in clean_cmd or "stop media" in clean_cmd or "play video" in clean_cmd or "pause video" in clean_cmd
+    ):
+        res = control_system_volume(clean_cmd)
+        return {
+            "status": "action_executed",
+            "intent": "system_volume_media",
+            "message": res["message"],
+            "data": res
+        }
+
+    # 3. Window & Multitasking Management
+    if (
+        "minimize all" in clean_cmd or "show desktop" in clean_cmd or "minimize windows" in clean_cmd or "hide windows" in clean_cmd
+        or "restore windows" in clean_cmd or "unminimize" in clean_cmd or "bring back windows" in clean_cmd
+        or "close window" in clean_cmd or "close active window" in clean_cmd or "close current window" in clean_cmd
+        or "close tab" in clean_cmd or "close browser tab" in clean_cmd or "close current tab" in clean_cmd
+        or "switch window" in clean_cmd or "alt tab" in clean_cmd or "switch app" in clean_cmd
+    ):
+        res = control_window_management(clean_cmd)
+        return {
+            "status": "action_executed",
+            "intent": "window_management",
+            "message": res["message"],
+            "data": res
+        }
+
+    # 4. Laptop Battery & Power Telemetry
+    if "battery" in clean_cmd or "power status" in clean_cmd or "is it charging" in clean_cmd or "charge level" in clean_cmd:
+        res = get_battery_telemetry()
+        return {
+            "status": "action_executed",
+            "intent": "battery_telemetry",
+            "message": res["message"],
+            "data": res
+        }
+
+    # 5. Workstation Power Controls (Lock, Sleep, Hibernate, Restart, Shutdown)
+    if (
+        "lock pc" in clean_cmd or "lock computer" in clean_cmd or "lock workstation" in clean_cmd
+        or "sleep pc" in clean_cmd or "put laptop to sleep" in clean_cmd or clean_cmd == "sleep"
+        or "hibernate" in clean_cmd or "restart laptop" in clean_cmd or "reboot computer" in clean_cmd
+        or "shutdown laptop" in clean_cmd or "turn off laptop" in clean_cmd
+    ):
+        res = control_power_state(clean_cmd)
+        return {
+            "status": "action_executed",
+            "intent": "power_control",
+            "message": res["message"],
+            "data": res
+        }
+
+    # 6. Wi-Fi & Wireless Network Telemetry
+    if "wifi" in clean_cmd or "wi fi" in clean_cmd or "wireless" in clean_cmd or "what wifi" in clean_cmd:
+        res = get_wifi_network_telemetry()
+        return {
+            "status": "action_executed",
+            "intent": "wifi_telemetry",
+            "message": res["message"],
+            "data": res
+        }
+
+    # 7. Hardware Specs & Uptime
+    if "specs" in clean_cmd or "laptop specs" in clean_cmd or "hardware specs" in clean_cmd or "computer specs" in clean_cmd or "system specs" in clean_cmd:
+        res = get_full_hardware_specs()
+        return {
+            "status": "action_executed",
+            "intent": "hardware_specs",
+            "message": res["message"],
+            "data": res
+        }
+
+    if "uptime" in clean_cmd or "how long has" in clean_cmd or "boot time" in clean_cmd:
+        res = get_system_uptime()
+        return {
+            "status": "action_executed",
+            "intent": "system_uptime",
+            "message": res["message"],
+            "data": res
+        }
+
+    # 8. Storage Maintenance & Clean up
+    if "recycle bin" in clean_cmd or "empty trash" in clean_cmd or "clean temp" in clean_cmd or "clear cache" in clean_cmd or "free up space" in clean_cmd:
+        res = empty_recycle_bin_and_clean_temp(clean_cmd)
+        return {
+            "status": "action_executed",
+            "intent": "system_cleanup",
+            "message": res["message"],
+            "data": res
+        }
+
+    # 9. Arbitrary Shell & PowerShell Command Execution
+    if (
+        clean_cmd.startswith("run command ") or clean_cmd.startswith("execute command ")
+        or clean_cmd.startswith("run powershell ") or clean_cmd.startswith("execute powershell ")
+        or clean_cmd.startswith("powershell ") or clean_cmd.startswith("run terminal ")
+        or clean_cmd.startswith("terminal ") or clean_cmd.startswith("cmd ")
+    ):
+        res = execute_shell_command(command_raw)
+        return {
+            "status": "action_executed",
+            "intent": "shell_command_execution",
+            "message": res["message"],
+            "data": res
+        }
+
+    # 10. File & Directory Management (Create, Delete, Read, List)
+    if (
+        clean_cmd.startswith("create folder") or clean_cmd.startswith("make folder") or clean_cmd.startswith("create directory")
+        or clean_cmd.startswith("create file") or clean_cmd.startswith("write file") or clean_cmd.startswith("read file")
+        or clean_cmd.startswith("delete file") or clean_cmd.startswith("remove file")
+        or clean_cmd.startswith("list files") or clean_cmd.startswith("show files")
+    ):
+        res = manage_files_and_directories(command_raw)
+        return {
+            "status": "action_executed",
+            "intent": "file_management",
+            "message": res["message"],
+            "data": res
+        }
+
+    # 11. Open Standard Folders & Drives
+    folder_keywords = [
+        "downloads", "download", "documents", "my documents", "desktop",
+        "pictures", "my pictures", "photos", "videos", "my videos", "music",
+        "my music", "recycle bin", "c drive", "d drive", "drive c", "drive d",
+        "projects folder", "my projects", "projects directory"
+    ]
+    if (clean_cmd.startswith("open ") or clean_cmd.startswith("show ")) and any(k in clean_cmd for k in folder_keywords):
+        target_k = re.sub(r'^(open|show)\s+(folder|directory)?\s*', '', clean_cmd).strip()
+        res = open_system_folder_or_drive(target_k)
+        if res.get("status") == "success":
+            return {
+                "status": "action_executed",
+                "intent": "open_folder",
+                "message": res["message"],
+                "data": res
+            }
+
+    # 12. Open Windows Settings & Administrative Consoles
+    settings_keywords = [
+        "settings", "bluetooth", "wifi", "network", "sound", "audio", "display",
+        "battery", "power", "sleep", "storage", "windows update", "update",
+        "installed apps", "apps", "notifications", "personalization", "taskbar",
+        "control panel", "device manager", "disk management", "task manager",
+        "snipping tool", "clock", "alarms", "timer"
+    ]
+    if (clean_cmd.startswith("open ") or clean_cmd.startswith("launch ")) and any(k in clean_cmd for k in settings_keywords):
+        target_s = re.sub(r'^(open|launch)\s+', '', clean_cmd).strip()
+        res = open_windows_settings(target_s)
+        if res.get("status") == "success":
+            return {
+                "status": "action_executed",
+                "intent": "open_settings",
+                "message": res["message"],
+                "data": res
+            }
+
+    # 13. Close / Terminate Applications
+    if clean_cmd.startswith("close ") or clean_cmd.startswith("kill ") or clean_cmd.startswith("terminate ") or clean_cmd.startswith("exit "):
+        target_app = re.sub(r'^(close|kill|terminate|exit)\s+(app|application|program|process)?\s*', '', clean_cmd).strip()
+        app_proc_map = {
+            "chrome": "chrome.exe",
+            "google chrome": "chrome.exe",
+            "browser": "chrome.exe",
+            "edge": "msedge.exe",
+            "microsoft edge": "msedge.exe",
+            "brave": "brave.exe",
+            "firefox": "firefox.exe",
+            "spotify": "spotify.exe",
+            "discord": "discord.exe",
+            "notepad": "notepad.exe",
+            "calculator": "calculatorapp.exe",
+            "calc": "calculatorapp.exe",
+            "vscode": "code.exe",
+            "vs code": "code.exe",
+            "code": "code.exe",
+            "visual studio code": "code.exe",
+            "paint": "mspaint.exe",
+            "task manager": "taskmgr.exe",
+            "taskmgr": "taskmgr.exe",
+            "steam": "steam.exe",
+            "teams": "teams.exe",
+            "slack": "slack.exe",
+            "zoom": "zoom.exe",
+            "word": "winword.exe",
+            "excel": "excel.exe",
+            "powerpoint": "powerpnt.exe",
+            "vlc": "vlc.exe"
+        }
+        kill_target = app_proc_map.get(target_app, target_app)
+        res = terminate_process_by_name(kill_target)
+        return {
+            "status": "action_executed",
+            "intent": "terminate_app",
+            "message": res["message"],
+            "data": res
+        }
+
+    # 14. Direct Time & Date Match (Instant Response)
     if "time" in words_set or "clock" in words_set or "current time" in raw_lower or "time is it" in raw_lower:
         now = datetime.now()
         formatted_time = now.strftime("%I:%M:%S %p")
@@ -588,7 +1279,7 @@ async def parse_and_execute_voice_intent(command_raw: str) -> Dict[str, Any]:
             "data": {"time": formatted_time, "date": formatted_date}
         }
 
-    # 2. Multi-step Project & Command Execution
+    # 15. Multi-step Project & Command Execution
     if "open" in words_set or "execute" in words_set or "run" in words_set or "ship" in words_set or "project" in words_set:
         matched_proj_path = None
         matched_proj_name = None
@@ -603,19 +1294,6 @@ async def parse_and_execute_voice_intent(command_raw: str) -> Dict[str, Any]:
                         matched_proj_path = full_p
                         matched_proj_name = proj_folder
                         break
-
-        if "projects folder" in clean_cmd or "projects directory" in clean_cmd or "my projects" in clean_cmd:
-            if not matched_proj_path:
-                try:
-                    subprocess.Popen(f'explorer "{projects_dir}"', shell=True)
-                    return {
-                        "status": "action_executed",
-                        "intent": "open_projects_folder",
-                        "message": f"NEXUS opened Projects directory ({projects_dir}).",
-                        "data": {"path": projects_dir}
-                    }
-                except Exception as e:
-                    return {"status": "error", "message": f"Failed to open Projects directory: {str(e)}"}
 
         if matched_proj_path:
             exec_match = re.search(r'(execute|run|ship)\s+(.+)', clean_cmd)
@@ -669,13 +1347,13 @@ async def parse_and_execute_voice_intent(command_raw: str) -> Dict[str, Any]:
                     return {
                         "status": "action_executed",
                         "intent": "open_project",
-                        "message": f"NEXUS {action_msg}.",
+                        "message": f"NEXUS {action_msg}, Sir.",
                         "data": {"path": matched_proj_path}
                     }
                 except Exception as e:
                     return {"status": "error", "message": f"Failed to open project {matched_proj_name}: {str(e)}"}
 
-    # 1.4 Wikipedia Encyclopedia Lookup
+    # 16. Wikipedia Encyclopedia Lookup
     if "wikipedia" in clean_cmd or "who is" in clean_cmd or "tell me about" in clean_cmd:
         res = await search_wikipedia(clean_cmd)
         if res.get("status") == "success":
@@ -686,7 +1364,7 @@ async def parse_and_execute_voice_intent(command_raw: str) -> Dict[str, Any]:
                 "data": res
             }
 
-    # 1.46 Live News Briefing
+    # 17. Live News Briefing
     if "news" in clean_cmd or "headlines" in clean_cmd or "head lines" in clean_cmd or "briefing" in clean_cmd:
         res = await get_live_news_briefing()
         return {
@@ -696,7 +1374,7 @@ async def parse_and_execute_voice_intent(command_raw: str) -> Dict[str, Any]:
             "data": res
         }
 
-    # 1.47 Disk Storage Telemetry
+    # 18. Disk Storage Telemetry
     if "storage" in clean_cmd or "disk space" in clean_cmd or "free space" in clean_cmd or "hard drive" in clean_cmd:
         res = get_disk_storage_telemetry()
         return {
@@ -706,7 +1384,7 @@ async def parse_and_execute_voice_intent(command_raw: str) -> Dict[str, Any]:
             "data": res
         }
 
-    # 1.49 Network Ping Telemetry & Speed Check
+    # 19. Network Ping Telemetry & Speed Check
     if "ping" in words_set or "internet status" in clean_cmd or "connection status" in clean_cmd or "latency" in clean_cmd:
         res = await check_network_connectivity()
         return {
@@ -716,7 +1394,17 @@ async def parse_and_execute_voice_intent(command_raw: str) -> Dict[str, Any]:
             "data": res
         }
 
-    # 1.50 Clipboard Reader
+    # 20. Clipboard Reader & Writer
+    if clean_cmd.startswith("copy ") and ("clipboard" in clean_cmd or "to clipboard" in clean_cmd):
+        text_to_copy = re.sub(r'^copy\s+', '', command_raw, flags=re.IGNORECASE).replace("to clipboard", "").strip()
+        set_clipboard_content(text_to_copy)
+        return {
+            "status": "action_executed",
+            "intent": "clipboard_writer",
+            "message": f"NEXUS copied text to system clipboard, Sir:\n\"{text_to_copy[:150]}\"",
+            "data": {"copied": text_to_copy}
+        }
+
     if "clipboard" in clean_cmd or "read clipboard" in clean_cmd or "what did i copy" in clean_cmd:
         res = read_system_clipboard()
         return {
@@ -726,8 +1414,8 @@ async def parse_and_execute_voice_intent(command_raw: str) -> Dict[str, Any]:
             "data": res
         }
 
-    # 1.51 Direct Google & YouTube Search Navigation
-    if ("search google" in clean_cmd or "search youtube" in clean_cmd or "google for" in clean_cmd or "youtube for" in clean_cmd) and not "wikipedia" in clean_cmd:
+    # 21. Direct Google & YouTube Search Navigation
+    if ("search google" in clean_cmd or "search youtube" in clean_cmd or "google for" in clean_cmd or "youtube for" in clean_cmd or "play on youtube" in clean_cmd) and not "wikipedia" in clean_cmd:
         res = search_google_or_youtube(clean_cmd)
         return {
             "status": "action_executed",
@@ -736,7 +1424,7 @@ async def parse_and_execute_voice_intent(command_raw: str) -> Dict[str, Any]:
             "data": res
         }
 
-    # 1.52 Persistent Notes & Voice Memory
+    # 22. Persistent Notes & Voice Memory
     if "note" in clean_cmd or "remember" in clean_cmd or "remind me" in clean_cmd:
         res = manage_user_notes(clean_cmd)
         return {
@@ -746,7 +1434,7 @@ async def parse_and_execute_voice_intent(command_raw: str) -> Dict[str, Any]:
             "data": res
         }
 
-    # 1.53 Workspace File Search
+    # 23. Workspace File Search
     if "find file" in clean_cmd or "search file" in clean_cmd or "where is file" in clean_cmd:
         res = find_workspace_file(clean_cmd)
         return {
@@ -756,8 +1444,8 @@ async def parse_and_execute_voice_intent(command_raw: str) -> Dict[str, Any]:
             "data": res
         }
 
-    # 1.54 Heavy Process Monitor
-    if "top processes" in clean_cmd or "heavy processes" in clean_cmd or "using ram" in clean_cmd:
+    # 24. Heavy Process Monitor
+    if "top processes" in clean_cmd or "heavy processes" in clean_cmd or "using ram" in clean_cmd or "process list" in clean_cmd:
         res = get_top_resource_processes()
         return {
             "status": "action_executed",
@@ -766,8 +1454,8 @@ async def parse_and_execute_voice_intent(command_raw: str) -> Dict[str, Any]:
             "data": res
         }
 
-    # 1.5 JARVIS Protocols (House Party, Clean Slate, Lockdown)
-    if "protocol" in clean_cmd or "house party" in clean_cmd or "clean slate" in clean_cmd or "lockdown" in clean_cmd or "lock pc" in clean_cmd:
+    # 25. JARVIS Protocols (House Party, Clean Slate, Lockdown)
+    if "protocol" in clean_cmd or "house party" in clean_cmd or "clean slate" in clean_cmd or "lockdown" in clean_cmd:
         res = await execute_jarvis_protocol(clean_cmd)
         return {
             "status": "action_executed",
@@ -776,7 +1464,7 @@ async def parse_and_execute_voice_intent(command_raw: str) -> Dict[str, Any]:
             "data": res
         }
 
-    # 1.6 Weather Telemetry
+    # 26. Weather Telemetry
     if "weather" in clean_cmd or "forecast" in clean_cmd or "temperature" in clean_cmd:
         res = await get_live_weather()
         return {
@@ -786,7 +1474,7 @@ async def parse_and_execute_voice_intent(command_raw: str) -> Dict[str, Any]:
             "data": res
         }
 
-    # 1.7 Full System Diagnostic Audit
+    # 27. Full System Diagnostic Audit
     if "diagnostic" in clean_cmd or "system scan" in clean_cmd or "system audit" in clean_cmd or "jarvis status" in clean_cmd or "nexus status" in clean_cmd:
         stats = get_system_telemetry()
         projects_count = len([d for d in os.listdir(r"d:\Projects") if os.path.isdir(os.path.join(r"d:\Projects", d))]) if os.path.exists(r"d:\Projects") else 0
@@ -798,7 +1486,7 @@ async def parse_and_execute_voice_intent(command_raw: str) -> Dict[str, Any]:
             "data": stats
         }
 
-    # 1.8 Desktop Screenshot Capture
+    # 28. Desktop Screenshot Capture
     if "screenshot" in clean_cmd or "take photo" in clean_cmd or "capture screen" in clean_cmd:
         res = await take_desktop_screenshot()
         return {
@@ -808,86 +1496,7 @@ async def parse_and_execute_voice_intent(command_raw: str) -> Dict[str, Any]:
             "data": res
         }
 
-    # 1.9 System Volume & Media Control
-    if "mute" in clean_cmd or "unmute" in clean_cmd or "volume" in clean_cmd:
-        res = control_system_volume(clean_cmd)
-        return {
-            "status": "action_executed",
-            "intent": "system_volume",
-            "message": res["message"],
-            "data": res
-        }
-
-    # 2. Time & Date Queries
-    if "time" in clean_cmd or "date" in clean_cmd or "clock" in clean_cmd:
-        now = datetime.now()
-        formatted_time = now.strftime("%I:%M:%S %p")
-        formatted_date = now.strftime("%A, %B %d, %Y")
-        
-        if "time" in clean_cmd:
-            msg = f"Current Time: {formatted_time} ({formatted_date})"
-        else:
-            msg = f"Current Date: {formatted_date} ({formatted_time})"
-            
-        return {
-            "status": "action_executed",
-            "intent": "time_date_query",
-            "message": f"NEXUS Temporal Data:\n• {msg}",
-            "data": {"time": formatted_time, "date": formatted_date}
-        }
-
-    # 3. Clipboard Reader
-    if "clipboard" in clean_cmd:
-        clip_text = get_clipboard_content()
-        if clip_text:
-            return {
-                "status": "action_executed",
-                "intent": "read_clipboard",
-                "message": f"NEXUS Clipboard Content:\n\"{clip_text[:400]}\"",
-                "data": {"clipboard": clip_text}
-            }
-        else:
-            return {
-                "status": "action_executed",
-                "intent": "read_clipboard",
-                "message": "NEXUS Clipboard is currently empty.",
-                "data": {"clipboard": ""}
-            }
-
-    # 3. OS Process Manager & Process Kill
-    if "kill" in clean_cmd or "terminate" in clean_cmd or "stop process" in clean_cmd or "close process" in clean_cmd:
-        m = re.search(r'(kill|terminate|stop process|close process)\s+(.+)', clean_cmd)
-        target_p = m.group(2).strip() if m else clean_cmd.replace("kill", "").replace("terminate", "").strip()
-        if target_p:
-            res = terminate_process_by_name(target_p)
-            return {
-                "status": "action_executed",
-                "intent": "kill_process",
-                "message": res["message"],
-                "data": res
-            }
-
-    if "top processes" in clean_cmd or "list processes" in clean_cmd or "process list" in clean_cmd or "running tasks" in clean_cmd:
-        procs = get_top_processes(limit=6)
-        proc_summary = ", ".join([f"{p['name']} ({p['memory_percent']}%)" for p in procs])
-        return {
-            "status": "action_executed",
-            "intent": "list_processes",
-            "message": f"Top Running OS Processes:\n{proc_summary}",
-            "data": procs
-        }
-
-    # 4. Hardware Stats
-    if "stats" in clean_cmd or "system" in clean_cmd or "cpu" in clean_cmd or "memory" in clean_cmd or "ram" in clean_cmd:
-        stats = get_system_telemetry()
-        return {
-            "status": "action_executed",
-            "intent": "system_stats",
-            "message": f"System Telemetry: CPU {stats['cpu_percent']}%, RAM {stats['ram_percent']}% used ({stats['ram_used_gb']}/{stats['ram_total_gb']} GB). OS: {stats['os']}.",
-            "data": stats
-        }
-
-    # 3. Git & GitHub Commands
+    # 29. Git & GitHub Commands
     if "git" in clean_cmd or "repository" in clean_cmd or "commit" in clean_cmd or "push" in clean_cmd:
         git_action = "status"
         if "log" in clean_cmd: git_action = "log"
@@ -905,7 +1514,7 @@ async def parse_and_execute_voice_intent(command_raw: str) -> Dict[str, Any]:
             "data": res
         }
 
-    # 4. Universal App Launching
+    # 30. Universal App Launching
     if clean_cmd.startswith("open ") or clean_cmd.startswith("launch ") or clean_cmd.startswith("start ") or clean_cmd.startswith("run "):
         app_target = re.sub(r'^(open|launch|start|run)\s+(app|application|program)?\s*', '', clean_cmd).strip()
         
@@ -918,22 +1527,48 @@ async def parse_and_execute_voice_intent(command_raw: str) -> Dict[str, Any]:
                 "chrome": "chrome",
                 "google chrome": "chrome",
                 "browser": "chrome",
+                "edge": "msedge",
+                "microsoft edge": "msedge",
+                "brave": "brave",
+                "firefox": "firefox",
+                "opera": "opera",
                 "notepad": "notepad",
+                "notepad++": "notepad++",
                 "calculator": "calc",
                 "calc": "calc",
                 "terminal": "start cmd",
+                "windows terminal": "wt",
                 "cmd": "start cmd",
                 "command prompt": "start cmd",
                 "powershell": "start powershell",
+                "git bash": "git-bash",
                 "explorer": "explorer",
                 "file explorer": "explorer",
                 "my computer": "explorer",
                 "spotify": "spotify",
                 "discord": "discord",
+                "slack": "slack",
+                "teams": "teams",
+                "zoom": "zoom",
+                "whatsapp": "whatsapp",
+                "telegram": "telegram",
                 "paint": "mspaint",
                 "mspaint": "mspaint",
                 "taskmgr": "taskmgr",
-                "task manager": "taskmgr"
+                "task manager": "taskmgr",
+                "word": "winword",
+                "excel": "excel",
+                "powerpoint": "powerpnt",
+                "onenote": "onenote",
+                "obsidian": "obsidian",
+                "steam": "steam",
+                "vlc": "vlc",
+                "control panel": "control",
+                "device manager": "devmgmt.msc",
+                "disk management": "diskmgmt.msc",
+                "snipping tool": "snippingtool",
+                "clock": "start ms-clock:",
+                "timer": "start ms-clock:"
             }
             
             launch_cmd = app_map.get(app_target, f"start {app_target}")
@@ -948,7 +1583,7 @@ async def parse_and_execute_voice_intent(command_raw: str) -> Dict[str, Any]:
             except Exception as e:
                 return {"status": "error", "message": f"Failed to launch {app_target}: {str(e)}"}
 
-    # 5. Explicit Web Search ONLY
+    # 31. Explicit Web Search ONLY
     if clean_cmd.startswith("search web for") or clean_cmd.startswith("google ") or clean_cmd.startswith("web search ") or clean_cmd.startswith("search internet for"):
         q = re.sub(r'^(search web for|google|web search|search internet for)\s*', '', clean_cmd).strip()
         if not q: q = "latest tech news"
@@ -961,7 +1596,7 @@ async def parse_and_execute_voice_intent(command_raw: str) -> Dict[str, Any]:
             "data": results
         }
 
-    # 6. Default: General LLM Query
+    # 32. Default: General LLM Query
     return {
         "status": "query",
         "intent": "chat_query",

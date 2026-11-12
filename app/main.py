@@ -36,6 +36,19 @@ from app.nexus_engine import (
     manage_user_notes,
     find_workspace_file,
     get_top_resource_processes,
+    control_system_brightness,
+    control_system_volume,
+    control_window_management,
+    get_battery_telemetry,
+    get_wifi_network_telemetry,
+    control_power_state,
+    empty_recycle_bin_and_clean_temp,
+    open_system_folder_or_drive,
+    open_windows_settings,
+    manage_files_and_directories,
+    execute_shell_command,
+    get_full_hardware_specs,
+    get_system_uptime,
     MultiAgentOrchestrator,
     detect_ai_providers,
     perform_hybrid_rag_search,
@@ -129,6 +142,77 @@ async def list_skills():
 @app.get("/api/system/stats")
 async def get_system_stats():
     return get_system_telemetry()
+
+# System Specs & Uptime Endpoints
+@app.get("/api/system/specs")
+async def get_specs_endpoint():
+    return get_full_hardware_specs()
+
+@app.get("/api/system/uptime")
+async def get_uptime_endpoint():
+    return get_system_uptime()
+
+# Battery & Wi-Fi Wireless Endpoints
+@app.get("/api/system/battery")
+async def get_battery_endpoint():
+    return get_battery_telemetry()
+
+@app.get("/api/system/wifi")
+async def get_wifi_endpoint():
+    return get_wifi_network_telemetry()
+
+# Screen Brightness Control Endpoints
+@app.get("/api/system/brightness")
+async def get_brightness_endpoint():
+    return control_system_brightness("current brightness")
+
+@app.post("/api/system/brightness")
+async def set_brightness_endpoint(data: Dict[str, Any]):
+    action = str(data.get("action") or data.get("level") or "up")
+    return control_system_brightness(action)
+
+# Audio Volume & Media Endpoints
+@app.post("/api/system/volume")
+async def control_volume_endpoint(data: Dict[str, str]):
+    action = data.get("action", "up")
+    return control_system_volume(action)
+
+# Window & Multitasking Management Endpoint
+@app.post("/api/system/window")
+async def control_window_endpoint(data: Dict[str, str]):
+    action = data.get("action", "minimize all")
+    return control_window_management(action)
+
+# Power Controls Endpoint
+@app.post("/api/system/power")
+async def control_power_endpoint(data: Dict[str, str]):
+    action = data.get("action", "lock")
+    return control_power_state(action)
+
+# Storage Maintenance & Cleanup Endpoint
+@app.post("/api/system/cleanup")
+async def system_cleanup_endpoint(data: Optional[Dict[str, str]] = None):
+    action = data.get("action", "recycle bin") if data else "recycle bin"
+    return empty_recycle_bin_and_clean_temp(action)
+
+# Shell & PowerShell Command Execution Endpoint
+@app.post("/api/system/shell")
+async def execute_shell_endpoint(data: Dict[str, str]):
+    command = data.get("command", "")
+    shell_type = data.get("shell", "powershell")
+    return execute_shell_command(command, shell_type=shell_type)
+
+# System Folder Navigator Endpoint
+@app.post("/api/system/folder")
+async def open_folder_endpoint(data: Dict[str, str]):
+    folder = data.get("folder", "downloads")
+    return open_system_folder_or_drive(folder)
+
+# Windows Settings Quick Launcher Endpoint
+@app.post("/api/system/settings")
+async def open_settings_endpoint(data: Dict[str, str]):
+    setting = data.get("setting", "settings")
+    return open_windows_settings(setting)
 
 # OS Process Manager Endpoints
 @app.get("/api/system/processes")

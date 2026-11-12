@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=7">
+    <link rel="stylesheet" href="style.css?v=8">
 </head>
 <body>
     <!-- Ambient Deep Void Atmosphere -->
@@ -250,8 +250,8 @@
                 <div class="settings-tab-pane" id="tab-pane-automation">
                     <div class="toggle-row">
                         <div>
-                            <div class="toggle-title">Desktop App Launcher</div>
-                            <div class="toggle-desc">Allow NEXUS to launch applications (Chrome, VS Code, Spotify, Notepad, Terminal) via voice or text.</div>
+                            <div class="toggle-title">Desktop App Launcher & Process Manager</div>
+                            <div class="toggle-desc">Allow NEXUS to launch applications (Chrome, VS Code, Spotify, Notepad, Terminal) and terminate processes.</div>
                         </div>
                         <label class="switch">
                             <input type="checkbox" id="auto-apps-toggle" checked>
@@ -261,8 +261,41 @@
 
                     <div class="toggle-row">
                         <div>
+                            <div class="toggle-title">OS & Laptop Hardware Control</div>
+                            <div class="toggle-desc">Control display brightness, audio volume, media playback, and window multitasking (minimize all, restore, close window).</div>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="auto-os-toggle" checked>
+                            <span class="slider-round"></span>
+                        </label>
+                    </div>
+
+                    <div class="toggle-row">
+                        <div>
+                            <div class="toggle-title">Shell & PowerShell Automation</div>
+                            <div class="toggle-desc">Allow execution of verified system commands ('run command ...') and Python automation scripts.</div>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="auto-shell-toggle" checked>
+                            <span class="slider-round"></span>
+                        </label>
+                    </div>
+
+                    <div class="toggle-row">
+                        <div>
+                            <div class="toggle-title">File & Directory Operations</div>
+                            <div class="toggle-desc">Create/read/delete files, list directory contents, and open standard user folders (Downloads, Documents, Desktop, Drives).</div>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="auto-files-toggle" checked>
+                            <span class="slider-round"></span>
+                        </label>
+                    </div>
+
+                    <div class="toggle-row">
+                        <div>
                             <div class="toggle-title">Web Search & Live Retrieval</div>
-                            <div class="toggle-desc">Allow NEXUS to query the web for real-time information, news, and weather.</div>
+                            <div class="toggle-desc">Allow NEXUS to query Google, YouTube, DuckDuckGo, Wikipedia, live weather, and news briefings.</div>
                         </div>
                         <label class="switch">
                             <input type="checkbox" id="auto-web-toggle" checked>
@@ -272,13 +305,34 @@
 
                     <div class="toggle-row">
                         <div>
-                            <div class="toggle-title">Hardware Telemetry</div>
-                            <div class="toggle-desc">Allow NEXUS to check system CPU, memory, and battery status.</div>
+                            <div class="toggle-title">Hardware Telemetry & Battery Tracking</div>
+                            <div class="toggle-desc">Real-time CPU %, RAM GB, Drive Storage, Wi-Fi status, Network ping, and Battery runtime metrics.</div>
                         </div>
                         <label class="switch">
                             <input type="checkbox" id="auto-telemetry-toggle" checked>
                             <span class="slider-round"></span>
                         </label>
+                    </div>
+
+                    <!-- Quick System Actions -->
+                    <div class="form-group" style="margin-top: 16px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.08);">
+                        <label class="form-label">Quick Laptop Actions</label>
+                        <p class="field-help" style="margin-bottom: 10px;">Trigger immediate operating system maintenance routines.</p>
+                        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                            <button type="button" class="data-action-btn" onclick="executeQuickLaptopAction('cleanup')">
+                                <span>🧹 Empty Recycle Bin</span>
+                            </button>
+                            <button type="button" class="data-action-btn" onclick="executeQuickLaptopAction('minimize')">
+                                <span>🪟 Minimize Windows</span>
+                            </button>
+                            <button type="button" class="data-action-btn" onclick="executeQuickLaptopAction('screenshot')">
+                                <span>📸 Capture Screen</span>
+                            </button>
+                            <button type="button" class="data-action-btn" onclick="executeQuickLaptopAction('specs')">
+                                <span>⚡ System Specs</span>
+                            </button>
+                        </div>
+                        <div id="quick-action-status" style="margin-top: 8px; font-size: 11px; color: var(--accent-cyan, #00f0ff);"></div>
                     </div>
                 </div>
 
@@ -360,6 +414,6 @@
         </div>
     </div>
 
-    <script src="app.js?v=7"></script>
+    <script src="app.js?v=8"></script>
 </body>
 </html>

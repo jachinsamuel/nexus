@@ -862,10 +862,16 @@ function saveAllSettings() {
 
     // 3. Automation
     const autoApps = document.getElementById("auto-apps-toggle")?.checked ? "true" : "false";
+    const autoOs = document.getElementById("auto-os-toggle")?.checked ? "true" : "false";
+    const autoShell = document.getElementById("auto-shell-toggle")?.checked ? "true" : "false";
+    const autoFiles = document.getElementById("auto-files-toggle")?.checked ? "true" : "false";
     const autoWeb = document.getElementById("auto-web-toggle")?.checked ? "true" : "false";
     const autoTelem = document.getElementById("auto-telemetry-toggle")?.checked ? "true" : "false";
 
     localStorage.setItem("nexus_auto_apps", autoApps);
+    localStorage.setItem("nexus_auto_os", autoOs);
+    localStorage.setItem("nexus_auto_shell", autoShell);
+    localStorage.setItem("nexus_auto_files", autoFiles);
     localStorage.setItem("nexus_auto_web", autoWeb);
     localStorage.setItem("nexus_auto_telemetry", autoTelem);
 
@@ -942,14 +948,23 @@ function loadSavedEngineSettings() {
 
     // 3. Automation
     const autoApps = localStorage.getItem("nexus_auto_apps") !== "false";
+    const autoOs = localStorage.getItem("nexus_auto_os") !== "false";
+    const autoShell = localStorage.getItem("nexus_auto_shell") !== "false";
+    const autoFiles = localStorage.getItem("nexus_auto_files") !== "false";
     const autoWeb = localStorage.getItem("nexus_auto_web") !== "false";
     const autoTelem = localStorage.getItem("nexus_auto_telemetry") !== "false";
 
     const autoAppsToggle = document.getElementById("auto-apps-toggle");
+    const autoOsToggle = document.getElementById("auto-os-toggle");
+    const autoShellToggle = document.getElementById("auto-shell-toggle");
+    const autoFilesToggle = document.getElementById("auto-files-toggle");
     const autoWebToggle = document.getElementById("auto-web-toggle");
     const autoTelemToggle = document.getElementById("auto-telemetry-toggle");
 
     if (autoAppsToggle) autoAppsToggle.checked = autoApps;
+    if (autoOsToggle) autoOsToggle.checked = autoOs;
+    if (autoShellToggle) autoShellToggle.checked = autoShell;
+    if (autoFilesToggle) autoFilesToggle.checked = autoFiles;
     if (autoWebToggle) autoWebToggle.checked = autoWeb;
     if (autoTelemToggle) autoTelemToggle.checked = autoTelem;
 
@@ -1014,5 +1029,48 @@ function initKeyboardShortcuts() {
         settingsModal.addEventListener("click", (e) => {
             if (e.target === settingsModal) closeSettingsModal();
         });
+    }
+}
+
+async function executeQuickLaptopAction(action) {
+    const statusEl = document.getElementById("quick-action-status");
+    if (statusEl) statusEl.innerText = "Executing action...";
+
+    try {
+        let resMsg = "Done.";
+        if (action === "cleanup") {
+            const res = await fetch("/api/system/cleanup", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ action: "recycle bin" })
+            });
+            const data = await res.json();
+            resMsg = data.message || "Recycle bin emptied.";
+        } else if (action === "minimize") {
+            const res = await fetch("/api/system/window", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ action: "minimize all" })
+            });
+            const data = await res.json();
+            resMsg = data.message || "Windows minimized.";
+        } else if (action === "screenshot") {
+            const res = await fetch("/api/system/screenshot", { method: "POST" });
+            const data = await res.json();
+            resMsg = data.message || "Screenshot captured.";
+        } else if (action === "specs") {
+            const res = await fetch("/api/system/specs");
+            const data = await res.json();
+            resMsg = data.message || "Specs retrieved.";
+        }
+
+        if (statusEl) {
+            statusEl.innerText = resMsg.replace(/\n/g, " ");
+            setTimeout(() => {
+                if (statusEl) statusEl.innerText = "";
+            }, 6000);
+        }
+    } catch (err) {
+        if (statusEl) statusEl.innerText = `Action error: ${err.message}`;
     }
 }
