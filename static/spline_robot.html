@@ -77,15 +77,107 @@
 			
 			const canvas = document.getElementById('canvas3d');
 			const app = new Application(canvas);
-			
+			window.splineApp = app;
 
-			
+			function adaptCameraZoom() {
+				if (!app) return;
+				try {
+					const cam = app._camera || (app._eventManager && app._eventManager.handlers && app._eventManager.handlers.LookAt && app._eventManager.handlers.LookAt.eventContext.getCamera());
+					if (!cam) return;
+					const currentSize = Math.min(canvas.clientWidth || 220, canvas.clientHeight || 220);
+					// Base 400px canvas size -> zoom 1.0. With 0.96 factor, leaves a clean comfortable margin
+					const targetZoom = (currentSize / 400) * 0.96;
+					if (Math.abs(cam.zoom - targetZoom) > 0.005) {
+						cam.zoom = targetZoom;
+						if (typeof cam.updateProjectionMatrix === 'function') {
+							cam.updateProjectionMatrix();
+						}
+						if (typeof app.requestRender === 'function') {
+							app.requestRender();
+						}
+					}
+				} catch (err) {}
+			}
+
+			function updateLookAt(normX, normY) {
+				if (!app || !app._eventManager || !app._eventManager.handlers || !app._eventManager.handlers.LookAt) return;
+				const lookAt = app._eventManager.handlers.LookAt;
+				const ctx = lookAt.eventContext;
+				if (!ctx || !ctx.raycaster || !ctx.getCamera) return;
+
+				const ndcX = Math.max(-2.5, Math.min(2.5, normX * 1.5));
+				const ndcY = Math.max(-2.5, Math.min(2.5, -normY * 1.5));
+
+				ctx.pointerWorld = { x: ndcX, y: ndcY };
+				ctx.pointerScreen = { x: (ndcX + 1) / 2, y: (ndcY + 1) / 2 };
+
+				try {
+					ctx.raycaster.setFromCamera(ctx.pointerWorld, ctx.getCamera());
+					if (lookAt.events && lookAt.events.length > 0) {
+						for (let ev of lookAt.events) {
+							ev.isReset = false;
+							lookAt.updateSingleEvent(ev);
+						}
+					}
+					if (typeof app.requestRender === 'function') {
+						app.requestRender();
+					}
+				} catch (e) {}
+			}
+			window.setSplineLookAt = updateLookAt;
+			window.adaptCameraZoom = adaptCameraZoom;
 
 			const onLoad = () => {
-				
-				
-				
+				try {
+					if (app._eventManager && app._eventManager.handlers && app._eventManager.handlers.LookAt) {
+						const lookAtHandler = app._eventManager.handlers.LookAt;
+						lookAtHandler.onMouseLeave = () => {};
+						lookAtHandler.events.forEach(ev => {
+							if (ev.data) {
+								ev.data.resetOnPointerLeave = false;
+							}
+							ev.isReset = false;
+						});
+					}
+					adaptCameraZoom();
+					// Ensure zoom stays adapted if rendering kicks in with slight delay
+					setTimeout(adaptCameraZoom, 150);
+					setTimeout(adaptCameraZoom, 500);
+					setTimeout(adaptCameraZoom, 1200);
+				} catch (e) {
+					console.warn('Spline onLoad init:', e);
+				}
+			};
+
+			window.addEventListener('resize', adaptCameraZoom);
+			if (window.ResizeObserver) {
+				new ResizeObserver(() => adaptCameraZoom()).observe(canvas);
 			}
+
+			// Direct listener on parent window if available
+			try {
+				if (window.parent && window.parent !== window) {
+					window.parent.addEventListener('mousemove', (e) => {
+						const iframe = window.parent.document.getElementById('spline-robot-iframe');
+						if (!iframe) return;
+						const rect = iframe.getBoundingClientRect();
+						const centerX = rect.left + rect.width / 2;
+						const centerY = rect.top + rect.height / 2;
+						const maxDistX = Math.max(centerX, window.parent.innerWidth - centerX) || (window.parent.innerWidth / 2);
+						const maxDistY = Math.max(centerY, window.parent.innerHeight - centerY) || (window.parent.innerHeight / 2);
+						const normX = (e.clientX - centerX) / maxDistX;
+						const normY = (e.clientY - centerY) / maxDistY;
+						updateLookAt(normX, normY);
+					}, { passive: true });
+				}
+			} catch (e) {}
+
+			// Also handle cross-frame postMessage
+			window.addEventListener('message', (event) => {
+				if (event.data && event.data.type === 'SPLINE_LOOK_AT') {
+					updateLookAt(event.data.normX, event.data.normY);
+				}
+			});
 
 			
 

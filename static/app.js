@@ -62,47 +62,45 @@ function initSplineInteraction() {
     window.addEventListener("mousemove", (e) => {
         if (!isCursorTrackingEnabled) return;
         try {
-            if (!iframe.contentDocument) return;
-            const canvas = iframe.contentDocument.getElementById("canvas3d");
-            if (!canvas) return;
-
             const rect = iframe.getBoundingClientRect();
-            // Calculate cursor offset relative to iframe center
             const centerX = rect.left + rect.width / 2;
             const centerY = rect.top + rect.height / 2;
+            const maxDistX = Math.max(centerX, window.innerWidth - centerX) || (window.innerWidth / 2);
+            const maxDistY = Math.max(centerY, window.innerHeight - centerY) || (window.innerHeight / 2);
+            const normX = (e.clientX - centerX) / maxDistX;
+            const normY = (e.clientY - centerY) / maxDistY;
 
-            // Normalized screen-wide direction (-1 to +1 from center)
-            const normX = (e.clientX - centerX) / (window.innerWidth / 2);
-            const normY = (e.clientY - centerY) / (window.innerHeight / 2);
+            // 1. Direct method call on iframe window
+            if (iframe.contentWindow && typeof iframe.contentWindow.setSplineLookAt === "function") {
+                iframe.contentWindow.setSplineLookAt(normX, normY);
+            } else if (iframe.contentWindow) {
+                // 2. Cross-frame postMessage fallback
+                iframe.contentWindow.postMessage({
+                    type: "SPLINE_LOOK_AT",
+                    normX: normX,
+                    normY: normY
+                }, "*");
+            }
 
-            // Map smoothly to canvas dimensions so look-at tracking remains active anywhere on screen
-            const targetX = rect.width / 2 + normX * (rect.width * 0.45);
-            const targetY = rect.height / 2 + normY * (rect.height * 0.45);
-
-            const pointerEvent = new PointerEvent("pointermove", {
-                bubbles: true,
-                cancelable: true,
-                clientX: targetX,
-                clientY: targetY,
-                screenX: e.screenX,
-                screenY: e.screenY,
-                pointerType: "mouse"
-            });
-            canvas.dispatchEvent(pointerEvent);
-
-            const mouseEvent = new MouseEvent("mousemove", {
-                bubbles: true,
-                cancelable: true,
-                clientX: targetX,
-                clientY: targetY,
-                screenX: e.screenX,
-                screenY: e.screenY
-            });
-            canvas.dispatchEvent(mouseEvent);
+            // 3. Dispatch synthetic pointer event to canvas if available
+            if (iframe.contentDocument) {
+                const canvas = iframe.contentDocument.getElementById("canvas3d");
+                if (canvas) {
+                    const targetX = rect.width / 2 + normX * (rect.width * 0.48);
+                    const targetY = rect.height / 2 + normY * (rect.height * 0.48);
+                    canvas.dispatchEvent(new PointerEvent("pointermove", {
+                        bubbles: true,
+                        cancelable: true,
+                        clientX: targetX,
+                        clientY: targetY,
+                        pointerType: "mouse"
+                    }));
+                }
+            }
         } catch (err) {
             // Safe cross-frame interaction
         }
-    });
+    }, { passive: true });
 }
 
 function initCanvasVisualizer() {

@@ -103,12 +103,12 @@ html, body {
     flex-shrink: 0;
 }
 
-/* Interactive Spline 3D Robot - Seamless, Uncropped, Full Resolution */
+/* Interactive Spline 3D Robot - Sleek, Scaled & Seamless */
 .spline-robot-wrapper {
     position: relative;
-    width: 400px;
-    height: 400px;
-    max-width: 90vw;
+    width: 220px;
+    height: 220px;
+    max-width: 85vw;
     aspect-ratio: 1 / 1;
     flex-shrink: 0;
     display: flex;
@@ -123,19 +123,19 @@ html, body {
     transition: all 0.35s var(--ease-spring);
 }
 
-/* Keep the 3D robot comfortable and uncropped at all times */
+/* Compact focused robotic companion in active chat thread */
 .app-stage.has-thread .spline-robot-wrapper {
-    width: 380px;
-    height: 380px;
-    max-width: 90vw;
+    width: 170px;
+    height: 170px;
+    max-width: 85vw;
 }
 
 .spline-robot-wrapper:hover {
-    transform: scale(1.03);
+    transform: scale(1.04);
 }
 
 .spline-robot-wrapper:active {
-    transform: scale(0.98);
+    transform: scale(0.97);
 }
 
 #spline-robot-iframe {
@@ -144,7 +144,7 @@ html, body {
     border: none;
     background: transparent;
     display: block;
-    pointer-events: auto;
+    pointer-events: none; /* Allows click through to wrapper and smooth screen-wide mouse tracking */
 }
 
 /* Subtle organic pulse on audio states - ZERO GREEN */
@@ -1201,6 +1201,10 @@ html, body {
     .jarvis-canvas-wrapper {
         width: 190px;
         height: 190px;
+    }
+    .spline-robot-wrapper {
+        width: 180px;
+        height: 180px;
     }
     .jarvis-greeting {
         font-size: 1.5rem;
